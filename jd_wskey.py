@@ -1,6 +1,6 @@
 '''
-new Env('wskey转换');
-cron: "30 8 * * *" wskey.py, tag:京东wskey转换
+new Env('京东wskey自动转换');
+cron: 30 8 * * * wskey.py
 '''
 import base64
 import json
