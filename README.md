@@ -2,7 +2,7 @@
 
 ---
 ```text
-ql repo https://github.com/Peterpig/jd_wskey.git "*.py"
+ql repo https://github.com/Peterpig/jd_wskey.git "jd_" "" "qinglong"
 ```
 
-crontab设置 30 21 * * *
+定时规则:  30 21 * * *
