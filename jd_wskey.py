@@ -204,12 +204,12 @@ def main():
             }]
             # fmt: one
             qinglong.insert_env(data=ck_env_dict)
-            logger.info(f'账户 {ws_pin_name} 新增cookie成功！')
+            logger.info(f'账户 {ws_pin_name} 新增cookie成功！\n')
             continue
 
         logger.info(f'开始检测账户 {ws_pin_name} cookie是否有效')
         if check_ck_is_ok(ck_env_dict):
-            logger.info(f'账户 {ws_pin_name} cookie有效，暂不转换！')
+            logger.info(f'账户 {ws_pin_name} cookie有效，暂不转换！\n')
             continue
 
         logger.info(f'账户 {ws_pin_name} cookie失效，开始使用wskey转换cookie！')
@@ -217,7 +217,7 @@ def main():
         ck_env_dict["value"] = ck
         ck_env_dict = {k: v for k, v in ck_env_dict.items() if k in ENV_KEEP_KEYS}
         qinglong.set_env(data=ck_env_dict)
-        logger.info(f'账户 {ws_pin_name} cookie转换成功！')
+        logger.info(f'账户 {ws_pin_name} cookie转换成功！\n')
 
 
 if __name__ == "__main__":
