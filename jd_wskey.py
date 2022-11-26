@@ -1,6 +1,6 @@
 '''
 new Env('京东wskey自动转换');
-cron: 30 8 * * * jd_wskey.py
+cron: 30 8,12,18 * * * jd_wskey.py
 '''
 import base64
 import json
