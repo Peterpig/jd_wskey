@@ -198,6 +198,7 @@ def main():
         ws_key = wskey_match.group(2)
 
         ck_env_dict = serch_ck(ws_pin, envlist)
+        logger.info("\n")
         # cookie不存在
         if not ck_env_dict:
             ck = gen_jd_cookie(wskey, params)
@@ -219,7 +220,7 @@ def main():
         if time_res:
             updated_at = float(time_res.group(1))
             if time.time() - updated_at >= (WSKEY_UPDATE_HOUR * 60 * 60) - (10 * 60):
-                logger.info(str(ws_pin_name) + ";即将到期或已过期\n")
+                logger.info(str(ws_pin_name) + ";即将到期或已过期")
                 update_ck = True
 
             else:
