@@ -144,7 +144,6 @@ def check_ck_is_ok(ckenv):
         "user-agent": UserAgent().google,
     }
     try:
-        # reuest = retry_request()
         res = requests.get(
             url=url, headers=headers, verify=False, timeout=10, allow_redirects=False
         )
@@ -176,6 +175,8 @@ def main():
     except TypeError:
         WSKEY_UPDATE_HOUR = 23
     WSKEY_UPDATE_SECOUND = WSKEY_UPDATE_HOUR * 60 * 60 - (10 * 60)
+
+    logger.info(f'{WSKEY_UPDATE_HOUR}强制更新cookie!')
 
     if not (host and client_id and client_sercet):
         logger.error("请设置青龙环境环境变量 host、client_id、client_sercet!")
@@ -227,7 +228,7 @@ def main():
 
             else:
                 left = round(float(WSKEY_UPDATE_SECOUND - diff_time) / 3600, 2)
-                logger.info(f"【{ws_pin_name}】cookie还剩{left}小时过期！开始检测cookie是否有效")
+                logger.info(f"【{ws_pin_name}】cookie还剩{left}小时强制更新！开始检测cookie是否有效")
 
         if check_ck_is_ok(ck_env_dict) and not update_ck:
             logger.info(f'【{ws_pin_name}】cookie有效，暂不转换！')
