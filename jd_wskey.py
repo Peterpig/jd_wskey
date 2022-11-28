@@ -176,6 +176,7 @@ def main():
         WSKEY_UPDATE_HOUR = int(os.environ.get('WSKEY_UPDATE_HOUR', 23))
     except TypeError:
         WSKEY_UPDATE_HOUR = 23
+    WSKEY_UPDATE_SECOUND = WSKEY_UPDATE_HOUR * 60 * 60 - (10 * 60)
 
     if not (host and client_id and client_sercet):
         logger.error("请设置青龙环境环境变量 host、client_id、client_sercet!")
@@ -219,13 +220,15 @@ def main():
         update_ck = False
         if time_res:
             updated_at = float(time_res.group(1))
-            diff_time = time.time() - updated_at
-            if diff_time >= (WSKEY_UPDATE_HOUR * 60 * 60) - (10 * 60):
+            now = time.time()
+            diff_time =  now - updated_at
+            if diff_time >= WSKEY_UPDATE_SECOUND:
                 logger.info(f"【{ws_pin_name}】即将到期或已过期")
                 update_ck = True
 
             else:
-                logger.info(f"cookie还剩{diff_time}s过期！")
+                left = round(float(WSKEY_UPDATE_SECOUND - diff_time) / 3600, 2)
+                logger.info(f"cookie还剩{left}小时过期！")
                 logger.info(f'开始检测【{ws_pin_name}】 cookie是否有效')
 
         if check_ck_is_ok(ck_env_dict) and not update_ck:
