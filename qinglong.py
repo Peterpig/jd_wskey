@@ -3,9 +3,11 @@ import logging
 from typing import List
 
 import requests
+from retry import retry
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
+TRY_TIMES = 10
 
 
 class Qinglong:
@@ -36,6 +38,7 @@ class Qinglong:
         if cls.token:
             cls.header.update({"Authorization": f"Bearer {cls.token}"})
 
+    @retry(tries=TRY_TIMES, delay=2)
     def request_method(self, method, url, params=None, data=None):
         try:
             kwargs = {"timeout": 30, "headers": self.header}

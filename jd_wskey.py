@@ -1,6 +1,6 @@
 '''
-new Env('wskey转换');
-cron: "30 */2 * * *" jd_wskey.py, tag:京东wskey转换
+new Env('京东wskey转换');
+cron: 30 */2 * * * jd_wskey.py
 '''
 import base64
 import json
@@ -171,6 +171,7 @@ def main():
     host = os.environ.get('host')
     client_id = os.environ.get('client_id')
     client_sercet = os.environ.get('client_sercet')
+    send_msg = []
     try:
         WSKEY_UPDATE_HOUR = int(os.environ.get('WSKEY_UPDATE_HOUR', 23))
     except TypeError:
@@ -206,11 +207,10 @@ def main():
             ck_env_dict = [{
                 "value": ck,
                 "name": "JD_COOKIE",
-                "remakrs": "wskey自动生成"
             }]
             # fmt: one
             qinglong.insert_env(data=ck_env_dict)
-            logger.info(f'账户 {ws_pin_name} 新增cookie成功！')
+            logger.info(f'【{ws_pin_name}】新增cookie成功！')
             continue
 
         ck_value = ck_env_dict['value']
@@ -219,23 +219,30 @@ def main():
         update_ck = False
         if time_res:
             updated_at = float(time_res.group(1))
-            if time.time() - updated_at >= (WSKEY_UPDATE_HOUR * 60 * 60) - (10 * 60):
+            diff_time = time.time() - updated_at >= (WSKEY_UPDATE_HOUR * 60 * 60)
+            logger.info(f"cookie还剩{diff_time}s过期！")
+            if diff_time - (10 * 60):
                 logger.info(str(ws_pin_name) + ";即将到期或已过期")
                 update_ck = True
 
             else:
-                logger.info(f'开始检测账户 {ws_pin_name} cookie是否有效')
+                logger.info(f'开始检测【{ws_pin_name}】 cookie是否有效')
 
         if check_ck_is_ok(ck_env_dict) and not update_ck:
-            logger.info(f'账户 {ws_pin_name} cookie有效，暂不转换！')
+            logger.info(f'【{ws_pin_name}】cookie有效，暂不转换！')
             continue
 
-        logger.info(f'账户 {ws_pin_name} cookie失效，开始使用wskey转换cookie！')
+        logger.info(f'【{ws_pin_name}】cookie失效，开始使用wskey转换cookie！')
         ck = gen_jd_cookie(wskey, params)
         ck_env_dict["value"] = ck
         ck_env_dict = {k: v for k, v in ck_env_dict.items() if k in ENV_KEEP_KEYS}
         qinglong.set_env(data=ck_env_dict)
-        logger.info(f'账户 {ws_pin_name} cookie转换成功！')
+        msg = f'【{ws_pin_name}】 cookie转换成功！'
+        logger.info(msg)
+        send_msg.append(msg)
+
+    if send_msg and send:
+        send.send('wskey转换成功', '\n'.join(send_msg))
 
 
 if __name__ == "__main__":
