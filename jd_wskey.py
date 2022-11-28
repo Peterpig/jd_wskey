@@ -14,6 +14,7 @@ import urllib
 import requests
 import urllib3
 from fake_useragent import UserAgent
+from retry import retry
 
 from qinglong import Qinglong
 
@@ -124,7 +125,7 @@ def gen_jd_cookie(wskey, params):
     ck = f"{pt_key};{pt_pin};__time={time.time()}"
     return ck
 
-
+@retry((ValueError), tries=5, delay=2)
 def check_ck_is_ok(ckenv):
     # ckenv = {
     #     "id": 1,
@@ -148,16 +149,14 @@ def check_ck_is_ok(ckenv):
             url=url, headers=headers, verify=False, timeout=10, allow_redirects=False
         )
     except Exception as err:
-        logger.info("JD接口错误 请重试或者更换IP")
-        return False
+        raise ValueError("JD接口错误 请重试或者更换IP")
 
     if res.status_code != 200:
-        logger.info("JD接口错误码: " + str(res.status_code))
-        return False
+        raise ValueError("JD接口错误码: " + str(res.status_code))
 
     code = int(json.loads(res.text)["retcode"])
     if code != 0:
-        return False
+        raise ValueError("JD接口返回结果异常: " + str(res.text))
 
     return True
 
@@ -228,8 +227,7 @@ def main():
 
             else:
                 left = round(float(WSKEY_UPDATE_SECOUND - diff_time) / 3600, 2)
-                logger.info(f"cookie还剩{left}小时过期！")
-                logger.info(f'开始检测【{ws_pin_name}】 cookie是否有效')
+                logger.info(f"【{ws_pin_name}】cookie还剩{left}小时过期！开始检测cookie是否有效")
 
         if check_ck_is_ok(ck_env_dict) and not update_ck:
             logger.info(f'【{ws_pin_name}】cookie有效，暂不转换！')
@@ -240,7 +238,7 @@ def main():
         ck_env_dict["value"] = ck
         ck_env_dict = {k: v for k, v in ck_env_dict.items() if k in ENV_KEEP_KEYS}
         qinglong.set_env(data=ck_env_dict)
-        msg = f'【{ws_pin_name}】 cookie转换成功！'
+        msg = f'【{ws_pin_name}】cookie转换成功！'
         logger.info(msg)
         send_msg.append(msg)
 
