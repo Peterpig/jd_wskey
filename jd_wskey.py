@@ -176,7 +176,7 @@ def main():
         WSKEY_UPDATE_HOUR = 23
     WSKEY_UPDATE_SECOUND = WSKEY_UPDATE_HOUR * 60 * 60 - (10 * 60)
 
-    logger.info(f'{WSKEY_UPDATE_HOUR}强制更新cookie!')
+    logger.info(f'{WSKEY_UPDATE_HOUR}小时强制更新cookie!')
 
     if not (host and client_id and client_sercet):
         logger.error("请设置青龙环境环境变量 host、client_id、client_sercet!")
