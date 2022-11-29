@@ -125,7 +125,7 @@ def gen_jd_cookie(wskey, params):
     ck = f"{pt_key};{pt_pin};__time={time.time()}"
     return ck
 
-@retry((ValueError), tries=5, delay=2)
+@retry((ValueError), tries=5, delay=2, jitter=(1,5))
 def check_ck_is_ok(ckenv):
     # ckenv = {
     #     "id": 1,
