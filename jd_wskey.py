@@ -155,7 +155,11 @@ def check_ck_is_ok(ckenv):
 
     code = int(json.loads(res.text)["retcode"])
     if code != 0:
-        raise ValueError("JD接口返回结果异常: " + str(res.text))
+        msg = str(res.text)
+        if "not login" in msg:
+            return False
+
+        raise ValueError("JD接口返回结果异常: " + msg)
 
     return True
 
