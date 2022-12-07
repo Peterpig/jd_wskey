@@ -231,7 +231,12 @@ def main():
                 logger.info(f"【{ws_pin_name}】cookie还剩{left}小时强制更新！开始检测cookie是否有效")
 
 
-        if check_ck_is_ok(ck_env_dict) or (update_ck is False):
+        try:
+            ck_is_ok = check_ck_is_ok(ck_env_dict)
+        except ValueError:
+            ck_is_ok = False
+
+        if update_ck is False and ck_is_ok:
             logger.info(f'【{ws_pin_name}】cookie有效，暂不转换！')
             continue
 
