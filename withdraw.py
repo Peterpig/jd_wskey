@@ -1,6 +1,6 @@
 """
-new Env('大赢家提现');
-cron: 58 23 * * * withdraw.py
+大赢家提现
+cron 58 23 * * * jd_jdsupermarket_sign.js
 """
 import asyncio
 import os
