@@ -16,7 +16,6 @@ ql = {
     "token": None,
 }
 
-
 withdraw_ids = [
     "1848d61655f979f8eac0dd36235586ba",
     "dac84c6bf0ed0ea9da2eca4694948440",
@@ -27,7 +26,9 @@ withdraw_ids = [
 ]
 
 
-async def withdraw(cookie):
+async def withdraw(cookie_dict):
+    cookie = cookie_dict["value"]
+    remarks = cookie_dict["remarks"].split("@@")[0]
     UUID = str(uuid.uuid4()).replace("-", "")
     ADID = str(uuid.uuid4())
 
@@ -40,14 +41,31 @@ async def withdraw(cookie):
         "User-Agent": f"jdapp;iPhone;9.5.4;13.6;${UUID};network/wifi;ADID/${ADID};model/iPhone10,3;addressid/0;appBuild/167668;jdSupportDarkMode/0;Mozilla/5.0 (iPhone; CPU iPhone OS 13_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
     }
 
+    async def request(session, url):
+        for i in range(3):
+            try:
+                async with session.get(url) as r:
+                    json_body = await r.json()
+                    print(f"{remarks}: ", json_body)
+                    return "success"
+            except Exception:
+                await asyncio.sleep(0.05)
+
     async with aiohttp.ClientSession(headers=headers) as session:
         for id in withdraw_ids:
             url = f"https://wq.jd.com/prmt_exchange/client/exchange?g_ty=h5&g_tk=&appCode=msc588d6d5&bizCode=makemoneyshop&ruleId={id}&sceneval=2"
 
-            async with session.get(url) as r:
-                json_body = await r.json()
-                print("json_body == ", json_body)
-                return json_body
+            await request(session, url)
+            # async with session.get(url) as r:
+            #     try:
+            #         json_body = await r.json()
+            #         print(f"{remarks}: ", json_body)
+            #     except Exception as e:
+            #         await asyncio.sleep(0.1)
+            #         r = await session.get(url)
+            #         json_body = await r.json()
+            #         print(f"{remarks}: ", json_body)
+            #     # return json_body
 
 
 async def getToken():
@@ -83,8 +101,7 @@ async def main():
     await getToken()
     cookies = await getCookies()
     for cookie_dict in cookies:
-        cookie = cookie_dict["value"]
-        task = asyncio.create_task(withdraw(cookie))
+        task = asyncio.create_task(withdraw(cookie_dict))
         task_list.append(task)
 
     done, pending = await asyncio.wait(task_list, timeout=None)
