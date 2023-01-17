@@ -2,9 +2,9 @@
 new Env('大赢家提现');
 cron: 58 23 * * * withdraw.py
 """
-
 import asyncio
 import os
+import time
 import uuid
 
 import aiohttp
@@ -12,12 +12,22 @@ import aiohttp
 ql = {
     "host": os.environ.get("host"),
     "client_id": os.environ.get("client_id"),
-    "client_sercet": os.environ.get("client_sercet"),
+    "client_secret": os.environ.get("client_secret"),
     "token": None,
 }
 
 
-async def withdraw(id, cookie):
+withdraw_ids = [
+    "1848d61655f979f8eac0dd36235586ba",
+    "dac84c6bf0ed0ea9da2eca4694948440",
+    "53515f286c491d66de3e01f64e3810b2",
+    "da3fc8218d2d1386d3b25242e563acb8",
+    "7ea791839f7fe3168150396e51e30917",
+    "02b48428177a44a4110034497668f808",
+]
+
+
+async def withdraw(cookie):
     UUID = str(uuid.uuid4()).replace("-", "")
     ADID = str(uuid.uuid4())
 
@@ -27,28 +37,28 @@ async def withdraw(id, cookie):
         "Accept-Language": "zh-CN,zh-Hans;q=0.9",
         "Cookie": cookie,
         "Referer": "https://wqs.jd.com/",
-        "User-Agent": f"jdapp;iPhone;9.5.4;13.6;$${UUID};network/wifi;ADID/$${ADID};model/iPhone10,3;addressid/0;appBuild/167668;jdSupportDarkMode/0;Mozilla/5.0 (iPhone; CPU iPhone OS 13_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+        "User-Agent": f"jdapp;iPhone;9.5.4;13.6;${UUID};network/wifi;ADID/${ADID};model/iPhone10,3;addressid/0;appBuild/167668;jdSupportDarkMode/0;Mozilla/5.0 (iPhone; CPU iPhone OS 13_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
     }
 
-    url = (
-        f"https://wq.jd.com/prmt_exchange/client/exchange?g_ty=h5&g_tk=&appCode=msc588d6d5&bizCode=makemoneyshop&ruleId=${id}&sceneval=2",
-    )
-
     async with aiohttp.ClientSession(headers=headers) as session:
-        async with session.get("http://httpbin.org/headers") as r:
-            json_body = await r.json()
-            print("json_body === ", json_body)
+        for id in withdraw_ids:
+            url = f"https://wq.jd.com/prmt_exchange/client/exchange?g_ty=h5&g_tk=&appCode=msc588d6d5&bizCode=makemoneyshop&ruleId={id}&sceneval=2"
+
+            async with session.get(url) as r:
+                json_body = await r.json()
+                print("json_body == ", json_body)
+                return json_body
 
 
-async def getToken(host):
+async def getToken():
     if not ql["token"]:
-        token_url = ql["host"] + "/open/envs"
+        token_url = ql["host"] + "/open/auth/token"
         params = {"client_id": ql["client_id"], "client_secret": ql["client_secret"]}
         async with aiohttp.ClientSession() as session:
             async with session.get(token_url, params=params) as r:
                 resp = await r.json()
-                if resp and resp["token"]:
-                    ql["token"] = resp["token"]
+                if resp and resp["data"] and resp["data"]["token"]:
+                    ql["token"] = resp["data"]["token"]
 
 
 async def getCookies():
@@ -62,16 +72,25 @@ async def getCookies():
 
     async with aiohttp.ClientSession(headers=headers) as session:
         async with session.get(url) as r:
-            envlist = await r.json()
+            resp = await r.json()
             return list(
-                filter(lambda x: "name" in x and x["name"] == "JD_COOKIE", envlist)
+                filter(lambda x: "name" in x and x["name"] == "JD_COOKIE", resp["data"])
             )
 
 
 async def main():
+    task_list = []
     await getToken()
     cookies = await getCookies()
-    print(cookies)
+    for cookie_dict in cookies:
+        cookie = cookie_dict["value"]
+        task = asyncio.create_task(withdraw(cookie))
+        task_list.append(task)
+
+    done, pending = await asyncio.wait(task_list, timeout=None)
+    # 得到执行结果
+    for done_task in done:
+        print(f"{time.time()} 得到执行结果 {done_task.result()}")
 
 
 if __name__ == "__main__":
