@@ -172,7 +172,7 @@ def serch_ck(pin, envlist):
 def main():
     host = os.environ.get('host')
     client_id = os.environ.get('client_id')
-    client_sercet = os.environ.get('client_sercet')
+    client_secret = os.environ.get('client_secret')
     send_msg = []
     try:
         WSKEY_UPDATE_HOUR = int(os.environ.get('WSKEY_UPDATE_HOUR', 23))
@@ -182,14 +182,14 @@ def main():
 
     logger.info(f'{WSKEY_UPDATE_HOUR}小时强制更新cookie!')
 
-    if not (host and client_id and client_sercet):
-        logger.error("请设置青龙环境环境变量 host、client_id、client_sercet!")
+    if not (host and client_id and client_secret):
+        logger.error("请设置青龙环境环境变量 host、client_id、client_secret!")
         sys.exit(0)
 
     json_config = {
         "host": host,
         "client_id": client_id,
-        "client_sercet": client_sercet
+        "client_secret": client_secret
     }
     qinglong = Qinglong(json_config)
     envlist = qinglong.get_env()

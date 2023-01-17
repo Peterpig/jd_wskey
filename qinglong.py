@@ -14,7 +14,7 @@ class Qinglong:
     def __init__(self, json_config):
         self.host = f"{json_config['host']}"
         self.client_id = json_config["client_id"]
-        self.client_secret = json_config["client_sercet"]
+        self.client_secret = json_config["client_secret"]
         self.token = None
         self.task_id = []
 
