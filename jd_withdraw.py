@@ -1,6 +1,6 @@
 """
 new Env('大赢家提现');
-cron 58 23 * * * jd_withdraw.py
+cron 58 59 23 * * *	jd_withdraw.py now
 """
 import asyncio
 import os
@@ -111,5 +111,6 @@ async def main():
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    # loop = asyncio.get_event_loop()
+    # loop.run_until_complete(main())
+    asyncio.run(main())
