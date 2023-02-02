@@ -23,6 +23,12 @@ withdraw_ids = [
     "da3fc8218d2d1386d3b25242e563acb8",
     "7ea791839f7fe3168150396e51e30917",
     "02b48428177a44a4110034497668f808",
+
+    # 红包
+    "d71b23a381ada0934039d890ad22ab8d",
+    "66d9058514891de12e96588697cc3bb3",
+    "b141ddd915d20f078d69f6910b02a60a",
+    "8609ec76a8a70db9a5443376d34fa26a",
 ]
 
 
@@ -46,10 +52,14 @@ async def withdraw(cookie_dict):
             try:
                 async with session.get(url) as r:
                     json_body = await r.json()
+
+                    if json_body['ret'] in [248, ]:
+                        raise Exception(json_body['msg'])
+
                     print(f"{remarks}: ", json_body)
                     return "success"
             except Exception:
-                await asyncio.sleep(0.05)
+                await asyncio.sleep(0.01)
 
     async with aiohttp.ClientSession(headers=headers) as session:
         for id in withdraw_ids:
