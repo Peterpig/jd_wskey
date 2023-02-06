@@ -65,6 +65,7 @@ async def withdraw(cookie_dict):
         for id in withdraw_ids:
             url = f"https://wq.jd.com/prmt_exchange/client/exchange?g_ty=h5&g_tk=&appCode=msc588d6d5&bizCode=makemoneyshop&ruleId={id}&sceneval=2"
 
+            print('id === ', id)
             await request(session, url)
             # async with session.get(url) as r:
             #     try:
