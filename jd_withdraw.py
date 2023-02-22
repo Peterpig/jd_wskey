@@ -63,7 +63,8 @@ async def withdraw(cookie_dict):
 
     async with aiohttp.ClientSession(headers=headers) as session:
         for id in withdraw_ids:
-            url = f"https://wq.jd.com/prmt_exchange/client/exchange?g_ty=h5&g_tk=&appCode=msc588d6d5&bizCode=makemoneyshop&ruleId={id}&sceneval=2"
+            url = f'https://api.m.jd.com/api?functionId=jxPrmtExchange_exchange&appid=cs_h5&body=%7B%22bizCode%22%3A%22makemoneyshop%22%2C%22ruleId%22%3A%22{id}%22%2C%22sceneval%22%3A2%2C%22buid%22%3A325%2C%22appCode%22%3A%22%22%2C%22time%22%3A{time.time()}%2C%22signStr%22%3A%22%22%7D'
+
 
             print('id === ', id)
             await request(session, url)
