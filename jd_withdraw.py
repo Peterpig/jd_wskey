@@ -55,16 +55,13 @@ async def withdraw(cookie_dict):
                     json_body = await r.json()
                     now = datetime.datetime.now().strftime( '%Y-%m-%d %H:%M:%S %f')
 
-                    print(f"{remarks}: ", json_body)
-
                     if json_body['ret'] in [248, ]:
-                        raise Exception(f"{now}   {remarks}: {json_body['msg']}")
-
-                    if json_body['ret'] in [224, ]:
-                        return f"{now}   {remarks}: {json_body['msg']}"
+                        raise Exception(f"{now} {remarks}: {json_body['msg']}")
 
                     if json_body['ret'] in [0, ]:
-                        return f"{now}   {remarks}: {json_body['msg']}"
+                        return f"{now} {remarks}: {json_body['msg']}"
+
+                    return f"{now} {remarks}: {json_body['msg']}"
             except Exception:
                 await asyncio.sleep(0.01)
 
