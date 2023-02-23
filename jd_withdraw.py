@@ -5,6 +5,7 @@ cron 58 59 23 * * *	jd_withdraw.py now
 import asyncio
 import os
 import time
+import datetime
 import uuid
 
 import aiohttp
@@ -52,17 +53,18 @@ async def withdraw(cookie_dict):
             try:
                 async with session.get(url) as r:
                     json_body = await r.json()
+                    now = datetime.datetime.now().strftime( '%Y-%m-%d %H:%M:%S %f')
 
                     print(f"{remarks}: ", json_body)
 
                     if json_body['ret'] in [248, ]:
-                        raise Exception(json_body['msg'])
+                        raise Exception(f"{now}   {remarks}: {json_body['msg']}")
 
                     if json_body['ret'] in [224, ]:
-                        return json_body['msg']
+                        return f"{now}   {remarks}: {json_body['msg']}"
 
                     if json_body['ret'] in [0, ]:
-                        return "success"
+                        return f"{now}   {remarks}: {json_body['msg']}"
             except Exception:
                 await asyncio.sleep(0.01)
 
@@ -123,7 +125,7 @@ async def main():
     done, pending = await asyncio.wait(task_list, timeout=None)
     # 得到执行结果
     for done_task in done:
-        print(f"{time.time()} 得到执行结果 {done_task.result()}")
+        print(f"{done_task.result()}")
 
 
 if __name__ == "__main__":
