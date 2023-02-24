@@ -115,7 +115,7 @@ async def main():
     task_list = []
     await getToken()
     cookies = await getCookies()
-    for cookie_dict in cookies:
+    for cookie_dict in cookies[::-1]:
         task = asyncio.create_task(withdraw(cookie_dict))
         task_list.append(task)
 
