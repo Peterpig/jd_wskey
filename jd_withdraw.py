@@ -123,7 +123,9 @@ async def main():
     done, pending = await asyncio.wait(task_list, timeout=None)
     # 得到执行结果
     for done_task in done:
-        print(f"{done_task.result()}")
+        res = done_task.result()
+        if res:
+            print(f"{done_task.result()}")
 
 
 if __name__ == "__main__":
