@@ -70,7 +70,8 @@ async def withdraw(cookie_dict):
             url = f'https://api.m.jd.com/api?functionId=jxPrmtExchange_exchange&appid=cs_h5&body=%7B%22bizCode%22%3A%22makemoneyshop%22%2C%22ruleId%22%3A%22{id}%22%2C%22sceneval%22%3A2%2C%22buid%22%3A325%2C%22appCode%22%3A%22%22%2C%22time%22%3A{time.time()}%2C%22signStr%22%3A%22%22%7D'
 
 
-            return await request(session, url)
+            ret = await request(session, url)
+            print(ret)
             # async with session.get(url) as r:
             #     try:
             #         json_body = await r.json()
