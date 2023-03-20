@@ -15,6 +15,8 @@ try:
 except:
     send = None
 
+from itertools import product
+
 ql = {
     "host": os.environ.get("host"),
     "client_id": os.environ.get("client_id"),
@@ -133,10 +135,10 @@ async def main():
     await getToken()
     cookies = await getCookies()
 
-    for cookie_dict in cookies[::-1]:
-        for row in withdraw_ids:
-            task = asyncio.create_task(withdraw_one(cookie_dict, row))
-            task_list.append(task)
+    for row in product(cookies, withdraw_ids):
+        cookie_dict, withdraw_row = row
+        task = asyncio.create_task(withdraw_one(cookie_dict, withdraw_row))
+        task_list.append(task)
 
     done, pending = await asyncio.wait(task_list, timeout=None)
     # 得到执行结果
