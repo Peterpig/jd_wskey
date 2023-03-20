@@ -3,9 +3,9 @@ new Env('大赢家提现');
 cron 58 59 23 * * *	jd_withdraw.py now
 """
 import asyncio
+import datetime
 import os
 import time
-import datetime
 import uuid
 
 import aiohttp
@@ -23,58 +23,30 @@ ql = {
 }
 
 withdraw_ids = [
-    '1848d61655f979f8eac0dd36235586ba',
-    'dac84c6bf0ed0ea9da2eca4694948440',
-    '53515f286c491d66de3e01f64e3810b2',
-    'da3fc8218d2d1386d3b25242e563acb8',
-    '7ea791839f7fe3168150396e51e30917',
-    '02b48428177a44a4110034497668f808',
-
+    "1848d61655f979f8eac0dd36235586ba",
+    "dac84c6bf0ed0ea9da2eca4694948440",
+    "53515f286c491d66de3e01f64e3810b2",
+    "da3fc8218d2d1386d3b25242e563acb8",
+    "7ea791839f7fe3168150396e51e30917",
+    "02b48428177a44a4110034497668f808",
     # 红包
-    'd158ed723d411967d15471edf90a25ab',
-    'd29967608439624bd4688e06254b6374',
-    'c14b645cabaa332a883cc5f43a9dd2b7',
-    '006d8d0f371e247333a302627af7da00',
-    '018300fea81b5bf3f1cad271f7bcfda7',
+    "d158ed723d411967d15471edf90a25ab",
+    "d29967608439624bd4688e06254b6374",
+    "c14b645cabaa332a883cc5f43a9dd2b7",
+    "006d8d0f371e247333a302627af7da00",
+    "018300fea81b5bf3f1cad271f7bcfda7",
 ]
 
 withdraw_ids = [
-    {
-        "id": "02b48428177a44a4110034497668f808",
-        "name": "100元现金"
-    },
-    {
-        "id": "7ea791839f7fe3168150396e51e30917",
-        "name": "20元现金"
-    },
-    {
-        "id": "da3fc8218d2d1386d3b25242e563acb8",
-        "name": "8元现金"
-    },
-    {
-        "id": "53515f286c491d66de3e01f64e3810b2",
-        "name": "现金奖励3元"
-    },
-    {
-        "id": "dac84c6bf0ed0ea9da2eca4694948440",
-        "name": "1元现金"
-    },
-    {
-        "id": "1848d61655f979f8eac0dd36235586ba",
-        "name": "0.3元现金"
-    },
-    {
-        "id": "018300fea81b5bf3f1cad271f7bcfda7",
-        "name": "20元红包"
-    },
-    {
-        "id": "006d8d0f371e247333a302627af7da00",
-        "name": "5元红包"
-    },
-    # {
-    #     "id": "c14b645cabaa332a883cc5f43a9dd2b7",
-    #     "name": "3元红包"
-    # },
+    {"id": "02b48428177a44a4110034497668f808", "name": "100元现金"},
+    {"id": "7ea791839f7fe3168150396e51e30917", "name": "20元现金"},
+    {"id": "da3fc8218d2d1386d3b25242e563acb8", "name": "8元现金"},
+    {"id": "53515f286c491d66de3e01f64e3810b2", "name": "现金奖励3元"},
+    {"id": "dac84c6bf0ed0ea9da2eca4694948440", "name": "1元现金"},
+    {"id": "1848d61655f979f8eac0dd36235586ba", "name": "0.3元现金"},
+    {"id": "018300fea81b5bf3f1cad271f7bcfda7", "name": "20元红包"},
+    {"id": "006d8d0f371e247333a302627af7da00", "name": "5元红包"},
+    {"id": "c14b645cabaa332a883cc5f43a9dd2b7", "name": "3元红包"},
     # {
     #     "id": "d158ed723d411967d15471edf90a25ab",
     #     "name": "0.5红包"
@@ -86,55 +58,26 @@ withdraw_ids = [
 ]
 
 
-async def withdraw(cookie_dict):
-    cookie = cookie_dict["value"]
-    remarks = cookie_dict["remarks"].split("@@")[0]
-    UUID = str(uuid.uuid4()).replace("-", "")
-    ADID = str(uuid.uuid4())
+async def request(remarks, session, url, name):
+    for i in range(5):
+        try:
+            async with session.get(url) as r:
+                json_body = await r.json()
+                now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S %f")
 
-    headers = {
-        "Accept": "*/*",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Accept-Language": "zh-CN,zh-Hans;q=0.9",
-        "Cookie": cookie,
-        "Referer": "https://wqs.jd.com/",
-        "User-Agent": f"jdapp;iPhone;9.5.4;13.6;${UUID};network/wifi;ADID/${ADID};model/iPhone10,3;addressid/0;appBuild/167668;jdSupportDarkMode/0;Mozilla/5.0 (iPhone; CPU iPhone OS 13_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
-    }
+                if json_body["ret"] in [
+                    248,
+                ]:
+                    raise Exception(f"{now} {remarks}: {json_body['msg']}")
 
-    async def request(session, url, name):
-        for i in range(5):
-            try:
-                async with session.get(url) as r:
-                    json_body = await r.json()
-                    now = datetime.datetime.now().strftime( '%Y-%m-%d %H:%M:%S %f')
+                if json_body["ret"] in [
+                    0,
+                ]:
+                    return f"{now} {remarks}: {json_body['msg']}"
 
-                    if json_body['ret'] in [248, ]:
-                        raise Exception(f"{now} {remarks}: {json_body['msg']}")
-
-                    if json_body['ret'] in [0, ]:
-                        return f"{now} {remarks}: {json_body['msg']}"
-
-                    return f"{now} {remarks}: {name} {json_body['msg']}"
-            except Exception:
-                await asyncio.sleep(0.01)
-
-    async with aiohttp.ClientSession(headers=headers) as session:
-        for row in withdraw_ids:
-            id, name = row['id'], row['name']
-            url = f'https://api.m.jd.com/api?functionId=jxPrmtExchange_exchange&appid=cs_h5&body=%7B%22bizCode%22%3A%22makemoneyshop%22%2C%22ruleId%22%3A%22{id}%22%2C%22sceneval%22%3A2%2C%22buid%22%3A325%2C%22appCode%22%3A%22%22%2C%22time%22%3A{time.time()}%2C%22signStr%22%3A%22%22%7D'
-
-
-            return await request(session, url, name)
-            # async with session.get(url) as r:
-            #     try:
-            #         json_body = await r.json()
-            #         print(f"{remarks}: ", json_body)
-            #     except Exception as e:
-            #         await asyncio.sleep(0.1)
-            #         r = await session.get(url)
-            #         json_body = await r.json()
-            #         print(f"{remarks}: ", json_body)
-            #     # return json_body
+                return f"{now} {remarks}: {name} {json_body['msg']}"
+        except Exception:
+            await asyncio.sleep(0.01)
 
 
 async def getToken():
@@ -165,26 +108,48 @@ async def getCookies():
             )
 
 
+async def withdraw_one(cookie_dict, withdraw_row):
+    cookie = cookie_dict["value"]
+    remarks = cookie_dict["remarks"].split("@@")[0]
+    UUID = str(uuid.uuid4()).replace("-", "")
+    ADID = str(uuid.uuid4())
+    headers = {
+        "Accept": "*/*",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Accept-Language": "zh-CN,zh-Hans;q=0.9",
+        "Cookie": cookie,
+        "Referer": "https://wqs.jd.com/",
+        "User-Agent": f"jdapp;iPhone;9.5.4;13.6;${UUID};network/wifi;ADID/${ADID};model/iPhone10,3;addressid/0;appBuild/167668;jdSupportDarkMode/0;Mozilla/5.0 (iPhone; CPU iPhone OS 13_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1",
+    }
+
+    async with aiohttp.ClientSession(headers=headers) as session:
+        id, name = withdraw_row["id"], withdraw_row["name"]
+        url = f"https://api.m.jd.com/api?functionId=jxPrmtExchange_exchange&appid=cs_h5&body=%7B%22bizCode%22%3A%22makemoneyshop%22%2C%22ruleId%22%3A%22{id}%22%2C%22sceneval%22%3A2%2C%22buid%22%3A325%2C%22appCode%22%3A%22%22%2C%22time%22%3A{time.time()}%2C%22signStr%22%3A%22%22%7D"
+        return await request(remarks, session, url, name)
+
+
 async def main():
     task_list = []
     await getToken()
     cookies = await getCookies()
+
     for cookie_dict in cookies[::-1]:
-        task = asyncio.create_task(withdraw(cookie_dict))
-        task_list.append(task)
+        for row in withdraw_ids:
+            task = asyncio.create_task(withdraw_one(cookie_dict, row))
+            task_list.append(task)
 
     done, pending = await asyncio.wait(task_list, timeout=None)
     # 得到执行结果
     send_msg = []
     for done_task in done:
         res = done_task.result()
-        if res and res != 'None':
+        if res and res != "None":
             print(f"{res}")
-            if 'success' in res:
+            if "success" in res:
                 send_msg.append(res)
 
     if send and send_msg:
-        send('提现成功', '\n'.join(send_msg))
+        send("提现成功", "\n".join(send_msg))
 
 
 if __name__ == "__main__":
