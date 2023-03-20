@@ -20,6 +20,11 @@ from qinglong import Qinglong
 
 urllib3.disable_warnings()
 
+try:
+    from notify import send
+except:
+    send = lambda *args: pass
+
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
@@ -246,6 +251,11 @@ def main():
 
         logger.info(f'【{ws_pin_name}】cookie失效，开始使用wskey转换cookie！')
         ck = gen_jd_cookie(wskey, params)
+
+        if 'fake' in ck:
+            msg = f'【{ws_pin_name}】wskey失效！！'
+            send(msg)
+
         ck_env_dict["value"] = ck
         ck_env_dict = {k: v for k, v in ck_env_dict.items() if k in ENV_KEEP_KEYS}
         qinglong.set_env(data=ck_env_dict)
