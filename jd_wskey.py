@@ -23,7 +23,7 @@ urllib3.disable_warnings()
 try:
     from notify import send
 except:
-    send = lambda *args: pass
+    send = lambda *args: ...
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
