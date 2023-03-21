@@ -261,7 +261,7 @@ def main():
         qinglong.set_env(data=ck_env_dict)
         msg = f'【{ws_pin_name}】cookie转换成功！'
         logger.info(msg)
-        send_msg.append(msg)
+        send_msg.append('wskey', msg)
 
     if send_msg and send:
         send('wskey转换成功', '\n'.join(send_msg))
