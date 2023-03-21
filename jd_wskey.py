@@ -254,7 +254,7 @@ def main():
 
         if 'fake' in ck:
             msg = f'【{ws_pin_name}】wskey失效！！'
-            send('wske Error', msg)
+            send_msg.append(msg)
             continue
 
         ck_env_dict["value"] = ck
@@ -262,7 +262,7 @@ def main():
         qinglong.set_env(data=ck_env_dict)
         msg = f'【{ws_pin_name}】cookie转换成功！'
         logger.info(msg)
-        send_msg.append('wskey', msg)
+        send_msg.append(msg)
 
     if send_msg and send:
         send('wskey转换成功', '\n'.join(send_msg))
