@@ -254,7 +254,8 @@ def main():
 
         if 'fake' in ck:
             msg = f'【{ws_pin_name}】wskey失效！！'
-            send(msg)
+            send('wske Error', msg)
+            continue
 
         ck_env_dict["value"] = ck
         ck_env_dict = {k: v for k, v in ck_env_dict.items() if k in ENV_KEEP_KEYS}
