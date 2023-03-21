@@ -198,7 +198,7 @@ def main():
     }
     qinglong = Qinglong(json_config)
     envlist = qinglong.get_env()
-    envlist = filter(lambda x: "name" in x and x["name"] == "JD_COOKIE", envlist)
+    envlist = list(filter(lambda x: "name" in x and x["name"] == "JD_COOKIE", envlist))
     wskey_list = get_wskey()
     params = gen_params()
 
