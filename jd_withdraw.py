@@ -147,8 +147,7 @@ async def main():
         res = done_task.result()
         if res and res != "None":
             print(f"{res}")
-            if "success" in res:
-                send_msg.append(res)
+            send_msg.append(res)
 
     if send and send_msg:
         send("提现成功", "\n".join(send_msg))
