@@ -72,7 +72,8 @@ class Qinglong:
     def insert_env(self, data):
         url = self.host + "/open/envs"
         response = self.request_method("post", url, data=data)
-        self.enable_env(response["id"])
+        if response:
+            self.enable_env(response["id"])
         return response
 
     def enable_env(self, env_ids: List[str]):
