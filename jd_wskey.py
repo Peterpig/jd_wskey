@@ -224,6 +224,7 @@ def main():
         wskey = wskey_match.string
         ws_pin = wskey_match.group(1)
         ws_pin_name = wskey_remarks or urllib.parse.unquote(ws_pin)
+        ws_pin_name = ws_pin_name.split("@")[0]
         ws_key = wskey_match.group(2)
 
         ck_env_dict = serch_ck(ws_pin, envlist)
