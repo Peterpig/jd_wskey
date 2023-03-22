@@ -39,18 +39,35 @@ except:
     send = None
 
 
+def get_local_qinglong():
+    ql_auth_file = '/ql/data/config/auth.json'
+    if not os.path.exists(ql_auth_file):
+        return None
+    try:
+        token = josn.load(open(ql_auth_file))['token']
+    except:
+        return None
+
+    local_ql = Qinglong({'token': token})
+
 
 def get_wskey():
     if "JD_WSCK" not in os.environ:
         logger.info("未添加JD_WSCK变量")
         sys.exit(0)
 
-    wskey_list = os.environ["JD_WSCK"].split("&")
+    local_ql = get_local_qinglong()
+    if not local_ql:
+        logger.info("获取青龙失败")
+        sys.exit(0)
+
+    envs = local_ql.get_env()
+    wskey_list = list(filter(lambda x: "name" in x and x["name"] == "JD_WSCK", envlist))
 
     # fmt: off
-    wskey_list = (
-        filter(lambda x: x,
-            map(lambda x: WSKEY_P.match(x), wskey_list)
+    wskey_list = list(
+        filter(lambda x: (x['remarks'], x['value']),
+            map(lambda x: WSKEY_P.match(x['value']), wskey_list)
         )
         or []
     )
@@ -202,7 +219,7 @@ def main():
     wskey_list = get_wskey()
     params = gen_params()
 
-    for wskey_match in wskey_list:
+    for wskey_remarks, wskey_match in wskey_list:
         wskey = wskey_match.string
         ws_pin = wskey_match.group(1)
         ws_pin_name = urllib.parse.unquote(ws_pin)
@@ -217,6 +234,7 @@ def main():
             ck_env_dict = [{
                 "value": ck,
                 "name": "JD_COOKIE",
+                "remarks": wskey_remarks,
             }]
             # fmt: one
             qinglong.insert_env(data=ck_env_dict)

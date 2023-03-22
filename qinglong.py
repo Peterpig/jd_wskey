@@ -12,10 +12,19 @@ TRY_TIMES = 10
 
 class Qinglong:
     def __init__(self, json_config):
-        self.host = f"{json_config['host']}"
-        self.client_id = json_config["client_id"]
-        self.client_secret = json_config["client_secret"]
-        self.token = None
+
+        if (not json_config.get('token')) \
+            and (
+                json_config.get('host')
+                and json_config.get('client_id')
+                and json_config.get('client_secret')
+            ):
+            raise Exception('参数错误， 请传入token或认证信息')
+
+        self.host = json_config.get('host')
+        self.client_id = json_config.get("client_id")
+        self.client_secret = json_config.get("client_secret")
+        self.token = json_config.get("token")
         self.task_id = []
 
         self.header = {
@@ -23,7 +32,15 @@ class Qinglong:
             "Content-Type": "application/json",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.71 Safari/537.36 Edg/94.0.992.38",
         }
-        Qinglong.gen_token(self)
+
+        if not self.token:
+            Qinglong.gen_token(self)
+
+        if not self.token:
+            raise Exception('Token生成错误!')
+
+        self.header.update({"Authorization": f"Bearer {self.token}"})
+
 
     @staticmethod
     def gen_token(cls):
