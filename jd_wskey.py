@@ -62,13 +62,13 @@ def get_wskey():
         logger.info("获取青龙失败")
         sys.exit(0)
 
-    envs = local_ql.get_env()
+    envlist = local_ql.get_env()
     wskey_list = list(filter(lambda x: "name" in x and x["name"] == "JD_WSCK", envlist))
 
     # fmt: off
     wskey_list = list(
-        filter(lambda x: (x['remarks'], x['value']),
-            map(lambda x: WSKEY_P.match(x['value']), wskey_list)
+        filter(lambda x: x[1],
+            map(lambda x: (x['remarks'], WSKEY_P.match(x['value'])), wskey_list)
         )
         or []
     )
@@ -223,7 +223,7 @@ def main():
     for wskey_remarks, wskey_match in wskey_list:
         wskey = wskey_match.string
         ws_pin = wskey_match.group(1)
-        ws_pin_name = urllib.parse.unquote(ws_pin)
+        ws_pin_name = wskey_remarks or urllib.parse.unquote(ws_pin)
         ws_key = wskey_match.group(2)
 
         ck_env_dict = serch_ck(ws_pin, envlist)
@@ -289,3 +289,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
