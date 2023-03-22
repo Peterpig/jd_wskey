@@ -44,11 +44,12 @@ def get_local_qinglong():
     if not os.path.exists(ql_auth_file):
         return None
     try:
-        token = josn.load(open(ql_auth_file))['token']
+        token = json.load(open(ql_auth_file))['token']
     except:
         return None
 
-    local_ql = Qinglong({'token': token})
+    local_ql = Qinglong({'token': token, 'host': 'http://127.0.0.1:5600'})
+    return local_ql
 
 
 def get_wskey():

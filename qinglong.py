@@ -16,7 +16,7 @@ class Qinglong:
         # 必须包含'host', 'client_id', 'client_secret'
         # 或包含 'token'
         if (set(['host', 'client_id', 'client_secret']) - set(json_config.keys()) != set()) \
-            or not json_config.get('token'):
+            and not json_config.get('token'):
             raise Exception('参数错误， 请传入token或认证信息')
 
         self.host = json_config.get('host')
