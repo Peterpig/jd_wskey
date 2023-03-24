@@ -70,12 +70,7 @@ async def request(remarks, session, url, name):
                 if json_body["ret"] in [
                     248,
                 ]:
-                    raise Exception(f"{now} {remarks}: {json_body['msg']}")
-
-                if json_body["ret"] in [
-                    0,
-                ]:
-                    return f"{now} {remarks}: {json_body['msg']}"
+                    raise Exception(f"{now} {remarks}: {name} {json_body['msg']}")
 
                 return f"{now} {remarks}: {name} {json_body['msg']}"
         except Exception:
