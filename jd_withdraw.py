@@ -46,9 +46,9 @@ withdraw_ids = [
     {"id": "53515f286c491d66de3e01f64e3810b2", "name": "现金奖励3元"},
     {"id": "dac84c6bf0ed0ea9da2eca4694948440", "name": "1元现金"},
     {"id": "1848d61655f979f8eac0dd36235586ba", "name": "0.3元现金"},
-    {"id": "018300fea81b5bf3f1cad271f7bcfda7", "name": "20元红包"},
-    {"id": "006d8d0f371e247333a302627af7da00", "name": "5元红包"},
-    {"id": "c14b645cabaa332a883cc5f43a9dd2b7", "name": "3元红包"},
+    # {"id": "018300fea81b5bf3f1cad271f7bcfda7", "name": "20元红包"},
+    # {"id": "006d8d0f371e247333a302627af7da00", "name": "5元红包"},
+    # {"id": "c14b645cabaa332a883cc5f43a9dd2b7", "name": "3元红包"},
     # {
     #     "id": "d158ed723d411967d15471edf90a25ab",
     #     "name": "0.5红包"
