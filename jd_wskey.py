@@ -273,7 +273,7 @@ def main():
         ck = gen_jd_cookie(wskey, params)
 
         if 'fake' in ck:
-            msg = f'【{ws_pin_name}】wskey失效！！'
+            msg = f'【{ws_pin_name}】wskey失效, 请重新抓wskey！！'
             send_msg.append(msg)
             continue
 
