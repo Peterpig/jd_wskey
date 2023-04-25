@@ -145,7 +145,8 @@ async def main():
             send_msg.append(res)
 
     if send and send_msg:
-        send("提现成功", "\n".join(send_msg))
+        # send("提现成功", "\n".join(send_msg))
+        pass
 
 
 if __name__ == "__main__":
