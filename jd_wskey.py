@@ -83,24 +83,37 @@ def get_wskey():
 
 def gen_params():
     url_list = ["aHR0cHM6Ly9hcGkubW9tb2UubWwv", "aHR0cHM6Ly9hcGkuaWxpeWEuY2Yv"]
+    url_list = ['aHR0cHM6Ly9hcGkubW9tb2UubWwv', 'aHR0cHM6Ly9hcGkubGltb2UuZXUub3JnLw==', 'aHR0cHM6Ly9hcGkuaWxpeWEuY2Yv']
+
+    res = None
     for i in url_list:
         url = str(base64.b64decode(i).decode())
         url_token = url + "api/genToken"
         url_check = url + "api/check_api"
 
         headers = {"authorization": "Bearer Shizuku"}
-        res = requests.get(
-            url=url_check, verify=False, headers=headers, timeout=20
-        ).text
-        c_info = json.loads(res)
-        ua = c_info["User-Agent"]
-        headers = {"User-Agent": ua}
-        params = requests.get(
-            url=url_token, headers=headers, verify=False, timeout=20
-        ).json()
+        try:
+            res = requests.get(
+                url=url_check, verify=False, headers=headers, timeout=20
+            ).text
+            c_info = json.loads(res)
+            ua = c_info["User-Agent"]
+            headers = {"User-Agent": ua}
+            params = requests.get(
+                url=url_token, headers=headers, verify=False, timeout=20
+            ).json()
+            res = params
+            break
+        except Excetion as e:
+            print(e)
+            continue
 
-        return params
 
+    if not res:
+        send('wskey转换失败', '云服务器全部失效！')
+        sys.exit(0)
+
+    return res
 
 def gen_jd_cookie(wskey, params):
     ua = UserAgent().google
