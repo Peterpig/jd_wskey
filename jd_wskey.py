@@ -287,6 +287,7 @@ def main():
 
         if 'fake' in ck:
             msg = f'【{ws_pin_name}】wskey失效, 请重新抓wskey！！'
+            logger.info(msg)
             send_msg.append(msg)
             continue
 
