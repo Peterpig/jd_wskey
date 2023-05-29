@@ -29,10 +29,7 @@ def main():
 
     id_list = list(map(lambda x: x["id"], all_task))
 
-    if not os.path.exists("./auto_run.json"):
-        f = open("./auto_run.json", "w+")
-    else:
-        f = open("./auto_run.json", "r+")
+    f = open("./auto_run.json", "a+")
 
     try:
         task_json = json.load(f)
@@ -56,6 +53,8 @@ def main():
         qinglong.run_crons(diff_task.map(lambda x: x["id"]))
 
     task_json["old_task_ids"] = id_list
+    f.seek(0)
+    f.truncate()
     json.dump(task_json, f, ensure_ascii=False, indent=4)
     f.close()
 
