@@ -10,3 +10,5 @@ venv/
 
 # vscode
 *.vscode
+
+auto_run.json

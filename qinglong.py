@@ -1,5 +1,7 @@
 import json
 import logging
+import os
+import sys
 from typing import List
 
 import requests
@@ -15,11 +17,13 @@ class Qinglong:
 
         # 必须包含'host', 'client_id', 'client_secret'
         # 或包含 'token'
-        if (set(['host', 'client_id', 'client_secret']) - set(json_config.keys()) != set()) \
-            and not json_config.get('token'):
-            raise Exception('参数错误， 请传入token或认证信息')
+        if (
+            set(["host", "client_id", "client_secret"]) - set(json_config.keys())
+            != set()
+        ) and not json_config.get("token"):
+            raise Exception("参数错误， 请传入token或认证信息")
 
-        self.host = json_config.get('host')
+        self.host = json_config.get("host")
         self.client_id = json_config.get("client_id")
         self.client_secret = json_config.get("client_secret")
         self.token = json_config.get("token")
@@ -35,10 +39,9 @@ class Qinglong:
             Qinglong.gen_token(self)
 
         if not self.token:
-            raise Exception('Token生成错误!')
+            raise Exception("Token生成错误!")
 
         self.header.update({"Authorization": f"Bearer {self.token}"})
-
 
     @staticmethod
     def gen_token(cls):
@@ -49,9 +52,6 @@ class Qinglong:
             cls.token = response["token"]
         except KeyError:
             raise KeyError(f"获取token失败")
-
-        if cls.token:
-            cls.header.update({"Authorization": f"Bearer {cls.token}"})
 
     @retry(tries=TRY_TIMES, delay=2)
     def request_method(self, method, url, params=None, data=None):
@@ -99,3 +99,30 @@ class Qinglong:
         env_ids = [str(x) for x in env_ids if x]
         response = self.request_method("put", url, data=env_ids)
         return response
+
+    def crons(self):
+        url = self.host + "/open/crons"
+        response = self.request_method("get", url)
+        return response
+
+    def run_crons(self, task_ids: List[str]):
+        url = self.host + "/open/crons/run"
+
+        task_ids = [str(x) for x in task_ids if x]
+        response = self.request_method("put", url, data=task_ids)
+        return response
+
+
+def init_ql():
+    host = os.environ.get("host")
+    client_id = os.environ.get("client_id")
+    client_secret = os.environ.get("client_secret")
+
+    if not (host and client_id and client_secret):
+        logger.error("请设置青龙环境环境变量 host、client_id、client_secret!")
+        sys.exit(0)
+
+    json_config = {"host": host, "client_id": client_id, "client_secret": client_secret}
+
+    qinglong = Qinglong(json_config)
+    return qinglong
