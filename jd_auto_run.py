@@ -51,6 +51,8 @@ def main():
         )
         logger.info(f"Run task: {', '.join(map(lambda x: x['name'], diff_task))}")
         qinglong.run_crons(diff_task.map(lambda x: x["id"]))
+    else:
+        logger.info("无新增任务。。。。")
 
     task_json["old_task_ids"] = id_list
     f.seek(0)
