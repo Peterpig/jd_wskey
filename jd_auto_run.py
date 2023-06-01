@@ -32,6 +32,7 @@ def main():
     f = open("./auto_run.json", "a+")
 
     try:
+        f.seek(0)
         task_json = json.load(f)
     except Exception as e:
         task_json = None
@@ -39,8 +40,13 @@ def main():
     # 历史任务不处理了
     if not task_json:
         task_json = {"old_task_ids": id_list}
+        f.seek(0)
+        f.truncate()
+        json.dump(task_json, f, ensure_ascii=False, indent=4)
+        return
 
     # 只对新增任务进行自动运行
+    diff_task = []
     diff_ids = set(id_list) - set(task_json.get("old_task_ids", set()))
     if diff_ids:
         diff_task = list(
@@ -49,11 +55,13 @@ def main():
                 all_task,
             )
         )
-        logger.info(f"Run task: {', '.join(map(lambda x: x['name'], diff_task))}")
-        qinglong.run_crons(diff_task.map(lambda x: x["id"]))
-    else:
-        logger.info("无新增任务。。。。")
 
+    if not diff_task:
+        logger.info("无新增任务。。。。")
+        return
+
+    logger.info(f"Run task: {', '.join(map(lambda x: x['name'], diff_task))}")
+    qinglong.run_crons(map(lambda x: x["id"], diff_task))
     task_json["old_task_ids"] = id_list
     f.seek(0)
     f.truncate()
