@@ -22,7 +22,8 @@ def main():
     all_crons = qinglong.crons()
 
     try:
-        all_task = all_crons["data"] except KeyError:
+        all_task = all_crons["data"]
+    except KeyError:
         logger.info("获取所有任务失败！")
         sys.exit(0)
 
