@@ -70,6 +70,16 @@ def main():
     json.dump(task_json, f, ensure_ascii=False, indent=4)
     f.close()
 
+    # 自动皮哦两
+    disable_tasks = filter(lambda x: x["isDisabled"] != 0, all_task)
+    disable_task_ids = list(map(lambda x: x["id"], disable_tasks))
+    if not disable_task_ids:
+        return
+
+    print(f'发现{", ".join(disable_task_ids)}任务被禁用，自动启动！')
+    qinglong.enable_task(disable_task_ids)
+
+
 
 def task_needed_run(task_info):
     """
