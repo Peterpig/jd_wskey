@@ -39,7 +39,7 @@ def main():
 
     # 自动启动任务
     disable_tasks = filter(lambda x: x["isDisabled"] != 0, all_task)
-    disable_task_ids = list(map(lambda x: x["id"], disable_tasks))
+    disable_task_ids = list(map(lambda x: f'{x["id"]}', disable_tasks))
     if disable_task_ids:
         print(f'发现{", ".join(disable_task_ids)}任务被禁用，自动启动！')
         qinglong.enable_task(disable_task_ids)
