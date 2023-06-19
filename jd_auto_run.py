@@ -22,8 +22,7 @@ def main():
     all_crons = qinglong.crons()
 
     try:
-        all_task = all_crons["data"]
-    except KeyError:
+        all_task = all_crons["data"] except KeyError:
         logger.info("获取所有任务失败！")
         sys.exit(0)
 
@@ -36,6 +35,13 @@ def main():
         task_json = json.load(f)
     except Exception as e:
         task_json = None
+
+    # 自动启动任务
+    disable_tasks = filter(lambda x: x["isDisabled"] != 0, all_task)
+    disable_task_ids = list(map(lambda x: x["id"], disable_tasks))
+    if disable_task_ids:
+        print(f'发现{", ".join(disable_task_ids)}任务被禁用，自动启动！')
+        qinglong.enable_task(disable_task_ids)
 
     # 历史任务不处理了
     if not task_json:
@@ -69,15 +75,6 @@ def main():
     f.truncate()
     json.dump(task_json, f, ensure_ascii=False, indent=4)
     f.close()
-
-    # 自动皮哦两
-    disable_tasks = filter(lambda x: x["isDisabled"] != 0, all_task)
-    disable_task_ids = list(map(lambda x: x["id"], disable_tasks))
-    if not disable_task_ids:
-        return
-
-    print(f'发现{", ".join(disable_task_ids)}任务被禁用，自动启动！')
-    qinglong.enable_task(disable_task_ids)
 
 
 
