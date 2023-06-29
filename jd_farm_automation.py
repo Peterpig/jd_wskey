@@ -1,6 +1,6 @@
 """
 new Env('农场自动种植兑换');
-cron 58 59 23 * * * jd_farm_automation.py
+cron 5 */2 * * * jd_farm_automation.py
 """
 
 import asyncio
