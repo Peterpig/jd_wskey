@@ -28,7 +28,7 @@ ql = {
     "token": None,
 }
 
-level = 2
+level = "2"
 
 headers = {
     "Connection": "keep-alive",
@@ -144,7 +144,7 @@ async def main():
     qinglong = init_ql()
     cookies = await get_cookies(qinglong)
     task_list = []
-    for cookie_dict in [cookies[0]]:
+    for cookie_dict in cookies:
         task = asyncio.create_task(main_(cookie_dict))
         task_list.append(task)
 
