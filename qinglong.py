@@ -100,7 +100,7 @@ class Qinglong:
         response = self.request_method("put", url, data=env_ids)
         return response
 
-    def enable_task(self, task_ids: list[str]):
+    def enable_task(self, task_ids: List[str]):
         url = self.host + "/open/crons/enable"
         if not isinstance(task_ids, list):
             task_ids = [task_ids]
@@ -135,4 +135,3 @@ def init_ql():
 
     qinglong = Qinglong(json_config)
     return qinglong
-
