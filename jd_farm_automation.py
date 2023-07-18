@@ -82,7 +82,7 @@ async def main_(cookie_dict):
     if info.farmUserPro.treeState == 1:
         return
 
-    elif info.farmUserPro.treeState == 2:
+    if info.farmUserPro.treeState == 2:
         logger.info(
             f"{info.farmUserPro.name},种植时间：{format_timestamp(info.farmUserPro.createTime)}"
         )
@@ -91,19 +91,21 @@ async def main_(cookie_dict):
             cookie, "gotCouponForFarm", {"version": 11, "channel": 3, "babelChannel": 0}
         )
         logger.info(coupon)
+        msg
 
         info = await api(
             cookie, "initForFarm", {"version": 11, "channel": 3, "babelChannel": 0}
         )
 
-    elif info.farmUserPro.treeState == 3:
+    if info.farmUserPro.treeState == 3:
         hongBao = info.myHongBaoInfo.hongBao
         msg += f"已兑换{hongBao.discount}红包，{format_timestamp(hongBao.endTime)}过期"
 
-    element = info.farmLevelWinGoods[level][0] or 0
+    element = info.farmLevelWinGoods[level][0] or None
 
     if not element:
         logger.info("'种子已抢完，下次在来!!!\n'")
+        return
 
     info = await api(
         cookie,
