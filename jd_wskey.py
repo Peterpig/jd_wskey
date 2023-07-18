@@ -154,9 +154,13 @@ def gen_jd_cookie(wskey, params):
         timeout=20,
     )
 
-    res_set = res.cookies.get_dict()
-    pt_key = "pt_key=" + res_set["pt_key"]
-    pt_pin = "pt_pin=" + res_set["pt_pin"]
+    try:
+        res_set = res.cookies.get_dict()
+        pt_key = "pt_key=" + res_set["pt_key"]
+        pt_pin = "pt_pin=" + res_set["pt_pin"]
+    except KeyError as e:
+        print('res_set == ', res_set)
+        return 'fake'
 
     ck = f"{pt_key};{pt_pin};__time={time.time()}"
     return ck
