@@ -104,7 +104,7 @@ def gen_params():
             ).json()
             res = params
             break
-        except Excetion as e:
+        except Exception as e:
             print(e)
             continue
 
