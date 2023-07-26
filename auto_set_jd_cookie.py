@@ -126,7 +126,7 @@ def get_username_passwd_from_bit(bit_id):
         out_bytes = subprocess.check_output(["bw", "get", "item", bit_id])
     except subprocess.CalledProcessError as e:
         logger.error("获取bit信息失败！！")
-        sys.exit(1)
+        raise e
 
     try:
         info = json.loads(out_bytes.decode())
@@ -134,7 +134,7 @@ def get_username_passwd_from_bit(bit_id):
         return login["username"], login["password"]
     except (KeyError, ValueError):
         logger.error("解析bit信息失败！！")
-        sys.exit(1)
+        raise e
 
 
 def main(bit_uesrs: tuple):
@@ -146,10 +146,17 @@ def main(bit_uesrs: tuple):
         bit_id = bit_id_map.get(bit_username)
         if not bit_id:
             logger.error(f"没找到{bit_username}对应的bit_id")
-            sys.exit(1)
-        jd_username, jd_passwd = get_username_passwd_from_bit(bit_id)
+            continue
+
+        try:
+            jd_username, jd_passwd = get_username_passwd_from_bit(bit_id)
+        except Exception as e:
+            logger.error(e)
+            continue
+
         logger.info(f"获取{bit_username}京东用户名密码成功， 开始获取cookie")
         cookie = get_ck(jd_username, jd_passwd)
+
         set_qinglong_ck(qinglong, envlist, cookie)
 
 
