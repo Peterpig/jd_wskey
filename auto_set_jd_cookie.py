@@ -1,17 +1,17 @@
 import json
 import logging
-import os
 import subprocess
-import sys
 import time
 
 import fire
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
 from qinglong import init_ql
 from selenium_browser import get_browser
+from utils import try_many_times
 
 jd_username = ""
 jd_passwd = ""
@@ -32,11 +32,12 @@ bit_id_map.json
 bit_id_map = json.load(open("./bit_id_map.json"))
 
 
+@try_many_times(fail_exit=True)
 def get_ck(jd_username, jd_passwd):
     browser = get_browser()
     browser.get("https://plogin.m.jd.com/login/login")
 
-    wait = WebDriverWait(browser, 135)
+    wait = WebDriverWait(browser, timeout=30)
     logger.info("请在网页端通过手机号码登录")
 
     wait.until(EC.presence_of_element_located((By.ID, "username")))
@@ -56,16 +57,20 @@ def get_ck(jd_username, jd_passwd):
     password.send_keys(jd_passwd)
 
     policy.click()
-    wait.until(EC.presence_of_element_located((By.CLASS_NAME, "btn-active")))
+    try:
+        wait.until(EC.presence_of_element_located((By.CLASS_NAME, "btn-active")))
 
-    login.click()
-    wait.until(EC.presence_of_element_located((By.ID, "msShortcutMenu")))
+        login.click()
+        wait.until(EC.presence_of_element_located((By.ID, "msShortcutMenu")))
 
-    browser.get("https://home.m.jd.com/myJd/newhome.action")
+        browser.get("https://home.m.jd.com/myJd/newhome.action")
 
-    username2 = wait.until(
-        EC.presence_of_element_located((By.CLASS_NAME, "my_header_name"))
-    ).text
+        username2 = wait.until(
+            EC.presence_of_element_located((By.CLASS_NAME, "my_header_name"))
+        ).text
+    except TimeoutException as e:
+        browser.close()
+        raise TimeoutException(msg="等待超时") from e
 
     pt_key, pt_pin, cookie = "", "", ""
     for _ in browser.get_cookies():
@@ -137,7 +142,7 @@ def get_username_passwd_from_bit(bit_id):
         raise e
 
 
-def main(bit_uesrs: tuple):
+def main(*bit_uesrs):
     qinglong = init_ql()
     envlist = qinglong.get_env()
     envlist = list(filter(lambda x: "name" in x and x["name"] == "JD_COOKIE", envlist))
