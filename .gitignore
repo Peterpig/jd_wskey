@@ -11,7 +11,11 @@ venv/
 # vscode
 *.vscode
 
+# tg session
+*.session
+
 auto_run.json
 logs/
 bit_id_map.json
 geckodriver.log
+
