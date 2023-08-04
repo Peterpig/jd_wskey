@@ -37,7 +37,7 @@ def get_ck(jd_username, jd_passwd):
     browser = get_browser()
     browser.get("https://plogin.m.jd.com/login/login")
 
-    wait = WebDriverWait(browser, timeout=30)
+    wait = WebDriverWait(browser, timeout=100)
     logger.info("请在网页端通过手机号码登录")
 
     wait.until(EC.presence_of_element_located((By.ID, "username")))
@@ -142,12 +142,12 @@ def get_username_passwd_from_bit(bit_id):
         raise e
 
 
-def main(*bit_uesrs):
+def main(*bit_users):
     qinglong = init_ql()
     envlist = qinglong.get_env()
     envlist = list(filter(lambda x: "name" in x and x["name"] == "JD_COOKIE", envlist))
 
-    for bit_username in bit_uesrs:
+    for bit_username in bit_users:
         bit_id = bit_id_map.get(bit_username)
         if not bit_id:
             logger.error(f"没找到{bit_username}对应的bit_id")

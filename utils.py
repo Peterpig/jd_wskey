@@ -23,3 +23,8 @@ def try_many_times(fail_exit=False, times=TRY_TIMES):
         return wrapper
 
     return decorate
+
+
+async def get_cookies(qinglong):
+    envs = qinglong.get_env()
+    return list(filter(lambda x: "name" in x and x["name"] == "JD_COOKIE", envs))
