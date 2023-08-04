@@ -1,6 +1,6 @@
 """
 new Env('大赢家提现');
-cron 58 59 23 * * *	jd_withdraw.py
+cron: 58 59 23 * * *	jd_withdraw.py
 """
 import asyncio
 import datetime
