@@ -1,5 +1,5 @@
 """
-new Env('大赢家提现');
+new Env('tg农场助理池子');
 cron: 30 23 * * 0 tg_auto_send.py
 """
 
@@ -28,9 +28,7 @@ async def main(client):
 
 
 if __name__ == "__main__":
-    client = TelegramClient(
-        __file__, api_id, api_hash, proxy=("socks5", "127.0.0.1", 7890)
-    )
+    client = TelegramClient("tg", api_id, api_hash)
 
     with client:
         client.loop.run_until_complete(main(client))
