@@ -5,10 +5,7 @@ cron: 30 23 * * 0 tg_auto_send.py
 
 import os
 
-from telethon import TelegramClient, events, sync
-
-api_id = os.environ.get("tg_api_id")
-api_hash = os.environ.get("tg_api_hash")
+from utils import get_tg_client
 
 
 async def main(client):
@@ -28,7 +25,7 @@ async def main(client):
 
 
 if __name__ == "__main__":
-    client = TelegramClient("tg", api_id, api_hash)
+    client = get_tg_client()
 
     with client:
         client.loop.run_until_complete(main(client))

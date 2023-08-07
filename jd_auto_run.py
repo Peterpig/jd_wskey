@@ -8,6 +8,7 @@ import os
 import sys
 
 from qinglong import init_ql
+from utils import get_tg_client
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +16,12 @@ try:
     from notify import send
 except:
     send = lambda *args: ...
+
+
+@client.on(events.NewMessage)
+async def my_event_handler(event):
+    if "hello" in event.raw_text:
+        await event.reply("hi!")
 
 
 def main():
@@ -76,7 +83,6 @@ def main():
     f.truncate()
     json.dump(task_json, f, ensure_ascii=False, indent=4)
     f.close()
-
 
 
 def task_needed_run(task_info):
