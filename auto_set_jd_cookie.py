@@ -88,6 +88,7 @@ def get_ck(jd_username, jd_passwd):
         "__time": time.time(),
     }
     print(f"{username2} 获取到cookie是：{cookie}")
+    browser.quit()
     return cookie
 
 
@@ -97,6 +98,7 @@ def serch_ck(pin, envlist):
             return env
 
 
+@try_many_times
 def set_qinglong_ck(qinglong, envlist, cookie):
     ck = (
         f"pt_key={cookie['pt_key']};pt_pin={cookie['pt_pin']};__time={cookie['__time']}"
@@ -137,7 +139,7 @@ def get_username_passwd_from_bit(bit_id):
         info = json.loads(out_bytes.decode())
         login = info["login"]
         return login["username"], login["password"]
-    except (KeyError, ValueError):
+    except (KeyError, ValueError) as e:
         logger.error("解析bit信息失败！！")
         raise e
 
