@@ -98,7 +98,7 @@ def serch_ck(pin, envlist):
             return env
 
 
-@try_many_times
+@try_many_times(fail_exit=True)
 def set_qinglong_ck(qinglong, envlist, cookie):
     ck = (
         f"pt_key={cookie['pt_key']};pt_pin={cookie['pt_pin']};__time={cookie['__time']}"
