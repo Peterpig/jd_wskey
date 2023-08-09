@@ -13,8 +13,9 @@ TRY_TIMES = 10
 
 
 class Qinglong:
+    # openapi地址
+    # https://qinglong.ukenn.top/
     def __init__(self, json_config):
-
         # 必须包含'host', 'client_id', 'client_secret'
         # 或包含 'token'
         if (
@@ -88,7 +89,20 @@ class Qinglong:
         url = self.host + "/open/envs"
         response = self.request_method("post", url, data=data)
         if response:
-            self.enable_env(response["id"])
+            if isinstance(response, list):
+                for r in response:
+                    self.enable_env(r["id"])
+            else:
+                self.enable_env(response["id"])
+        return response
+
+    def delete_env(self, env_ids: List[str]):
+        url = self.host + "/open/envs"
+        if not isinstance(env_ids, list):
+            env_ids = [env_ids]
+
+        env_ids = [str(x) for x in env_ids if x]
+        response = self.request_method("delete", url, data=env_ids)
         return response
 
     def enable_env(self, env_ids: List[str]):

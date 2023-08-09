@@ -3,6 +3,7 @@ import os
 import time
 import traceback
 
+import socks
 from telethon import TelegramClient
 
 TRY_TIMES = 5
@@ -39,7 +40,7 @@ def get_tg_client(proxy_ip=None, proxy_port=None, session_name="tg"):
 
     if proxy_ip and proxy_port:
         client = TelegramClient(
-            session_name, api_id, api_hash, proxy=("socks5", proxy_ip, proxy_port)
+            session_name, api_id, api_hash, proxy=(socks.SOCKS5, proxy_ip, proxy_port)
         )
     else:
         client = TelegramClient(session_name, api_id, api_hash)
