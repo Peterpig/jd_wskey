@@ -96,6 +96,17 @@ class Qinglong:
                 self.enable_env(response["id"])
         return response
 
+    def put_env(self, data):
+        url = self.host + "/open/envs"
+        response = self.request_method("put", url, data=data)
+        if response:
+            if isinstance(response, list):
+                for r in response:
+                    self.enable_env(r["id"])
+            else:
+                self.enable_env(response["id"])
+        return response
+
     def delete_env(self, env_ids: List[str]):
         url = self.host + "/open/envs"
         if not isinstance(env_ids, list):
