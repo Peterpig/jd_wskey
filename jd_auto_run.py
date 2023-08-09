@@ -18,12 +18,6 @@ except:
     send = lambda *args: ...
 
 
-@client.on(events.NewMessage)
-async def my_event_handler(event):
-    if "hello" in event.raw_text:
-        await event.reply("hi!")
-
-
 def main():
     qinglong = init_ql()
     all_crons = qinglong.crons()
