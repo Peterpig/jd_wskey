@@ -7,7 +7,7 @@ from concurrent.futures._base import CancelledError
 
 import aiohttp
 import yaml
-from telethon import events
+from telethon import errors, events
 
 from qinglong import init_ql
 from utils import get_logger, get_tg_client
@@ -108,6 +108,24 @@ async def parse_message(raw_text):
     return env, act_name
 
 
+def decorate(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except asyncio.streams.IncompleteReadError as e:
+            pass
+        except errors.FloodWaitError as e:
+            pass
+        except Exception:
+            pass
+
+    return wrapper
+
+    return decorate
+
+
+@decorate
 async def handler(event):
     raw_text = event.raw_text
     logger.info(f"检测到消息 \n{raw_text}")
@@ -167,8 +185,10 @@ async def handler(event):
 async def main():
     global config_map
     await refresh()
+    import logging
 
-    client = get_tg_client(proxy_ip="127.0.0.1", proxy_port=7890)
+    tg_logger = get_logger("tg", console=False)
+    client = get_tg_client(proxy_ip="127.0.0.1", proxy_port=7890, logger=tg_logger)
 
     async with client:
         me = (await client.get_me()).username
@@ -193,6 +213,7 @@ async def main():
             except OSError:
                 print("Failed to connect")
             await asyncio.sleep(1)
+        # client.loop.run_forever()
 
 
 if __name__ == "__main__":

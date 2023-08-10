@@ -6,6 +6,7 @@ import sys
 import time
 import traceback
 from logging import handlers
+from pathlib import Path
 
 import colorlog
 import socks
@@ -39,16 +40,20 @@ async def get_cookies(qinglong):
     return list(filter(lambda x: "name" in x and x["name"] == "JD_COOKIE", envs))
 
 
-def get_tg_client(proxy_ip=None, proxy_port=None, session_name="tg"):
+def get_tg_client(proxy_ip=None, proxy_port=None, session_name="tg", logger=None):
     api_id = os.environ.get("tg_api_id")
     api_hash = os.environ.get("tg_api_hash")
 
     if proxy_ip and proxy_port:
         client = TelegramClient(
-            session_name, api_id, api_hash, proxy=(socks.SOCKS5, proxy_ip, proxy_port)
+            session_name,
+            api_id,
+            api_hash,
+            proxy=(socks.SOCKS5, proxy_ip, proxy_port),
+            base_logger=logger,
         )
     else:
-        client = TelegramClient(session_name, api_id, api_hash)
+        client = TelegramClient(session_name, api_id, api_hash, base_logger=logger)
 
     return client
 
@@ -62,40 +67,44 @@ log_colors_config = {
 }
 
 
-def get_logger(file_name, level=logging.INFO):
+def get_logger(file_name, level=logging.INFO, console=True, rotating=True):
     logger = logging.getLogger(file_name)
     # 防止日志重复打印 logger.propagate 布尔标志, 用于指示消息是否传播给父记录器
     logger.propagate = False
 
     fmt = "%(asctime)s - %(levelname)s: %(message)s"
     if not logger.handlers:
-        # 1
-        ch = logging.StreamHandler()
+        if console:
+            # 1
+            ch = logging.StreamHandler()
 
-        colored_formatter = colorlog.ColoredFormatter(
-            fmt=f"%(log_color)s{fmt}",
-            log_colors=log_colors_config,
-        )
-        ch.setFormatter(colored_formatter)
+            colored_formatter = colorlog.ColoredFormatter(
+                fmt=f"%(log_color)s{fmt}",
+                log_colors=log_colors_config,
+            )
+            ch.setFormatter(colored_formatter)
+            logger.addHandler(ch)
 
-        # 2
-        today = datetime.datetime.today()
-        today_now = f"{today:%Y-%m-%d}"
-        PARENT_DIR = os.path.abspath(os.path.dirname(__file__))
-        LOGGING_DIR = os.path.join(PARENT_DIR, f"logs/{file_name}")
-        file_handler = handlers.TimedRotatingFileHandler(
-            filename=os.path.join(LOGGING_DIR, today_now),
-            when="D",
-            interval=1,
-            backupCount=15,
-        )
-        file_handler.suffix = ".log"
-        file_formatter = logging.Formatter(fmt)
-        file_handler.setFormatter(file_formatter)
+        if rotating:
+            # 2
+            today = datetime.datetime.today()
+            today_now = f"{today:%Y-%m-%d}"
+            PARENT_DIR = os.path.abspath(os.path.dirname(__file__))
+            LOGGING_DIR = os.path.join(PARENT_DIR, f"logs/{file_name}")
+            Path(LOGGING_DIR).mkdir(parents=True, exist_ok=True)
+            file_handler = handlers.TimedRotatingFileHandler(
+                filename=os.path.join(LOGGING_DIR, today_now),
+                when="D",
+                interval=1,
+                backupCount=15,
+            )
+            file_handler.suffix = ".log"
+            file_formatter = logging.Formatter(fmt)
+            file_handler.setFormatter(file_formatter)
+            logger.addHandler(file_handler)
 
         logger.setLevel(level)
-        logger.addHandler(ch)
-        logger.addHandler(file_handler)
+
     return logger
 
 
