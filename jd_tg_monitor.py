@@ -1,6 +1,6 @@
 import asyncio
 import datetime
-import logging
+import functools
 import re
 from collections import defaultdict
 from concurrent.futures._base import CancelledError
@@ -108,6 +108,62 @@ async def parse_message(raw_text):
     return env, act_name
 
 
+async def handler(event):
+    raw_text = event.raw_text
+    logger.info(f"检测到消息 \n{raw_text}")
+
+    env, act_name = await parse_message(raw_text)
+    if not env:
+        return
+
+    env_name = env["name"]
+
+    logger.info(f"开始检测环境变量：【{env_name}】是否存在")
+    exist_env = await env_exist(env_name)
+    if not exist_env:
+        logger.info(f"环境变量【{env_name}】不存在，插入！")
+        ret = ql.insert_env([env])
+        env_id = ret[0]["id"]
+    else:
+        logger.info(f"环境变量【{env_name}】存在，更新！")
+        env_id = exist_env["id"]
+        env["id"] = env_id
+        ret = ql.put_env(env)
+
+    tasks = []
+    if env_name in config_map:
+        logger.warning(f"环境变量【{env_name}】在配置文件中")
+
+        task_info = config_map[env_name]
+        script = task_info["Script"]
+        if script not in task_id_map:
+            logger.warning(f"环境变量【{env_name}】task配置中, 跳过")
+            return
+
+        tasks = task_id_map[script]
+
+    if act_name:
+        for k, v in task_name_map.items():
+            if act_name in k:
+                tasks.extend(v)
+
+    if not tasks:
+        logger.warning(f"环境变量【{env_name}】没找到可执行任务，跳过")
+        return
+
+    task_names = list(map(lambda x: x["name"], tasks))
+    task_ids = list(map(lambda x: x["id"], tasks))
+
+    logger.info(f"开始运行脚本{', '.join(task_names)}")
+    ql.run_crons(task_ids)
+
+    await asyncio.sleep(60)
+    # logger.info(f"删除环境变量{name}")
+    # ql.delete_env(env_id)
+    logger.info(f"消息处理完毕\n")
+    await refresh()
+
+
 async def main():
     global config_map
     await refresh()
@@ -118,61 +174,9 @@ async def main():
         me = (await client.get_me()).username
         logger.info(me)
 
-        @client.on(events.NewMessage(pattern=r".*\n*export \w+=\"[^\"]+\""))
-        async def handler(event):
-            raw_text = event.raw_text
-            logger.info(f"检测到消息 \n{raw_text}")
-
-            env, act_name = await parse_message(raw_text)
-            if not env:
-                return
-
-            env_name = env["name"]
-
-            logger.info(f"开始检测环境变量：【{env_name}】是否存在")
-            exist_env = await env_exist(env_name)
-            if not exist_env:
-                logger.info(f"环境变量【{env_name}】不存在，插入！")
-                ret = ql.insert_env([env])
-                env_id = ret[0]["id"]
-            else:
-                logger.info(f"环境变量【{env_name}】存在，更新！")
-                env_id = exist_env["id"]
-                env["id"] = env_id
-                ret = ql.put_env(env)
-
-            tasks = []
-            if env_name in config_map:
-                logger.warning(f"环境变量【{env_name}】在配置文件中")
-
-                task_info = config_map[env_name]
-                script = task_info["Script"]
-                if script not in task_id_map:
-                    logger.warning(f"环境变量【{env_name}】task配置中, 跳过")
-                    return
-
-                tasks = task_id_map[script]
-
-            if act_name:
-                for k, v in task_name_map.items():
-                    if act_name in k:
-                        tasks.extend(v)
-
-            if not tasks:
-                logger.warning(f"环境变量【{env_name}】没找到可执行任务，跳过")
-                return
-
-            task_names = list(map(lambda x: x["name"], tasks))
-            task_ids = list(map(lambda x: x["id"], tasks))
-
-            logger.info(f"开始运行脚本{', '.join(task_names)}")
-            ql.run_crons(task_ids)
-
-            await asyncio.sleep(60)
-            # logger.info(f"删除环境变量{name}")
-            # ql.delete_env(env_id)
-            logger.info(f"消息处理完毕\n")
-            await refresh()
+        client.add_event_handler(
+            handler, events.NewMessage(pattern=r".*\n*export \w+=\"[^\"]+\"")
+        )
 
         while client.is_connected():
             try:
