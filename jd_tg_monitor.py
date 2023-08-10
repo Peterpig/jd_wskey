@@ -108,24 +108,6 @@ async def parse_message(raw_text):
     return env, act_name
 
 
-def decorate(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except asyncio.streams.IncompleteReadError as e:
-            pass
-        except errors.FloodWaitError as e:
-            pass
-        except Exception:
-            pass
-
-    return wrapper
-
-    return decorate
-
-
-@decorate
 async def handler(event):
     raw_text = event.raw_text
     logger.info(f"检测到消息 \n{raw_text}")
@@ -185,7 +167,6 @@ async def handler(event):
 async def main():
     global config_map
     await refresh()
-    import logging
 
     tg_logger = get_logger("tg", console=False)
     client = get_tg_client(proxy_ip="127.0.0.1", proxy_port=7890, logger=tg_logger)
@@ -201,10 +182,6 @@ async def main():
         while client.is_connected():
             try:
                 await client.run_until_disconnected()
-            except CancelledError:
-                pass
-            except asyncio.CancelledError:
-                pass
             except Exception:
                 pass
         else:
@@ -217,12 +194,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    # with client:
-    #     client.loop.run_until_complete(main())
-    #     try:
-    #         client.run_until_disconnected()
-    #     except asyncio.CancelledError:
-    #         ...
-    #     finally:
-    #         await asyncio.sleep(2)
     asyncio.run(main())
