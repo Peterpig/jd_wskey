@@ -10,7 +10,7 @@ import yaml
 from telethon import events
 
 from qinglong import init_ql
-from utils import get_tg_client
+from utils import get_logger, get_tg_client
 
 CONFIG_URL = "https://p.6tun.com/https://raw.githubusercontent.com/shufflewzc/AutoSpy/master/config/Faker.spy"
 
@@ -20,13 +20,15 @@ task_id_map = defaultdict(list)
 task_name_map = defaultdict(list)
 
 
-logging.basicConfig(level=logging.INFO, format="%(message)s")
-logger = logging.getLogger(__name__)
+logger = get_logger(__file__)
 
 
 async def refresh():
-    await get_all_task()
-    await get_parse_config()
+    global task_id_map
+    global task_name_map
+    task_id_map = defaultdict(list)
+    task_name_map = defaultdict(list)
+    await asyncio.gather(get_all_task(), get_parse_config())
 
 
 async def get_parse_config():
@@ -39,6 +41,7 @@ async def get_parse_config():
             for config in js_config:
                 env = config["Env"]
                 config_map[env] = config
+    logger.info("刷新config成功")
 
 
 async def get_all_task():
@@ -52,6 +55,7 @@ async def get_all_task():
         scrpit = command.split("/")[-1]
         task_id_map[scrpit].append(task)
         task_name_map[name].append(task)
+    logger.info("刷新task成功")
 
 
 async def env_exist(env_name):
@@ -100,7 +104,7 @@ async def parse_message(raw_text):
         "value": value,
         "remarks": f"[AutoGen]-[{now}]",
     }
-    logging.info(f"获取到环境变量：{env}")
+    logger.info(f"获取到环境变量：{env}")
     return env, act_name
 
 
@@ -112,12 +116,12 @@ async def main():
 
     async with client:
         me = (await client.get_me()).username
-        print(me)
+        logger.info(me)
 
         @client.on(events.NewMessage(pattern=r".*\n*export \w+=\"[^\"]+\""))
         async def handler(event):
             raw_text = event.raw_text
-            logging.info(f"检测到消息 {raw_text}")
+            logger.info(f"检测到消息 \n{raw_text}")
 
             env, act_name = await parse_message(raw_text)
             if not env:
@@ -125,26 +129,26 @@ async def main():
 
             env_name = env["name"]
 
-            logging.info(f"开始检测环境变量：【{env_name}】是否存在")
+            logger.info(f"开始检测环境变量：【{env_name}】是否存在")
             exist_env = await env_exist(env_name)
             if not exist_env:
-                logging.info(f"环境变量【{env_name}】不存在，插入！")
+                logger.info(f"环境变量【{env_name}】不存在，插入！")
                 ret = ql.insert_env([env])
                 env_id = ret[0]["id"]
             else:
-                logging.info(f"环境变量【{env_name}】存在，更新！")
+                logger.info(f"环境变量【{env_name}】存在，更新！")
                 env_id = exist_env["id"]
                 env["id"] = env_id
                 ret = ql.put_env(env)
 
             tasks = []
             if env_name in config_map:
-                logging.warning(f"环境变量【{env_name}】在配置文件中")
+                logger.warning(f"环境变量【{env_name}】在配置文件中")
 
                 task_info = config_map[env_name]
                 script = task_info["Script"]
                 if script not in task_id_map:
-                    logging.warning(f"环境变量【{env_name}】task配置中, 跳过")
+                    logger.warning(f"环境变量【{env_name}】task配置中, 跳过")
                     return
 
                 tasks = task_id_map[script]
@@ -155,19 +159,20 @@ async def main():
                         tasks.extend(v)
 
             if not tasks:
-                logging.warning(f"环境变量【{env_name}】没找到可执行任务，跳过")
+                logger.warning(f"环境变量【{env_name}】没找到可执行任务，跳过")
                 return
 
             task_names = list(map(lambda x: x["name"], tasks))
             task_ids = list(map(lambda x: x["id"], tasks))
 
-            logging.info(f"开始运行脚本{', '.join(task_names)}")
+            logger.info(f"开始运行脚本{', '.join(task_names)}")
             ql.run_crons(task_ids)
 
             await asyncio.sleep(60)
-            # logging.info(f"删除环境变量{name}")
+            # logger.info(f"删除环境变量{name}")
             # ql.delete_env(env_id)
-            logging.info(f"消息处理完毕\n")
+            logger.info(f"消息处理完毕\n")
+            await refresh()
 
         while client.is_connected():
             try:

@@ -13,9 +13,11 @@ venv/
 
 # tg session
 *.session
+*.session-journal
 
 auto_run.json
 logs/
+*.log
 bit_id_map.json
 geckodriver.log
 
