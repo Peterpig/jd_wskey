@@ -167,5 +167,19 @@ def main(*bit_users):
         set_qinglong_ck(qinglong, envlist, cookie)
 
 
+def main2():
+    user_list = [
+        "jd_OZaKcBtuByQ8DYv----06ehvdQFJ",
+        "jd_ciZQDjGjcoik----MW3RxB9J",
+        "jd_kabQ6yhqmOVzLut----NixnEyF7F",
+        "jd_07M2I2zQ8eOp6vb----GA47Z9IrO",
+        "pxjoa9SocGU9----D8RQ0JGCB",
+    ]
+
+    for user in user_list:
+        username, psswd = user.split("----")
+        cookie = get_ck(username, psswd)
+
+
 if __name__ == "__main__":
-    fire.Fire(main)
+    fire.Fire(main2)
