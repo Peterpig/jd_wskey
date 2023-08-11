@@ -145,7 +145,7 @@ async def handler(event):
                 logger.warning(f"环境变量【{env_name}】task配置中, 跳过")
                 continue
 
-            tasks.append(task_id_map[script])
+            tasks.extend(task_id_map[script])
 
     if act_name:
         for k, v in task_name_map.items():
@@ -159,7 +159,7 @@ async def handler(event):
     task_names = list(map(lambda x: x["name"], tasks))
     task_ids = list(map(lambda x: x["id"], tasks))
 
-    logger.info(f"开始运行脚本{', '.join(task_names)}")
+    logger.info(f"开始运行脚本【{', '.join(task_names)}】")
     ql.run_crons(task_ids)
 
     await asyncio.sleep(60)
