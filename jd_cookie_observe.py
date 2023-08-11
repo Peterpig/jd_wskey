@@ -20,7 +20,7 @@ async def main():
     ql = init_ql()
     cookies = await get_cookies(ql)
 
-    disable_cookies = filter(lambda x: x["status"] != 0, cookies)
+    disable_cookies = list(filter(lambda x: x["status"] != 0, cookies))
     if disable_cookies:
         msg = "\n".join(
             [
