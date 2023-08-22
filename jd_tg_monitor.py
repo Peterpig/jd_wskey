@@ -119,6 +119,8 @@ async def handler(event):
     if not env_list:
         return
 
+    await event.message.mark_read()
+
     tasks = []
     for env in env_list:
         env_name = env["name"]
@@ -166,6 +168,7 @@ async def handler(event):
     # logger.info(f"删除环境变量{name}")
     # ql.delete_env(env_id)
     logger.info(f"消息处理完毕\n")
+
     await refresh()
 
 
