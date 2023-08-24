@@ -236,14 +236,13 @@ def get_ck(jd_username, jd_passwd):
         # wait.until(EC.presence_of_element_located((By.ID, "msShortcutMenu")))
         # browser.get("https://home.m.jd.com/myJd/newhome.action")
         # username2 = getElement(browser, By.CLASS_NAME, "my_header_name").text
-        break
 
-    pt_key, pt_pin, cookie = "", "", ""
-    for _ in browser.get_cookies():
-        if _["name"] == "pt_key":
-            pt_key = _["value"]
-        elif _["name"] == "pt_pin":
-            pt_pin = _["value"]
+        pt_key, pt_pin, cookie = "", "", ""
+        for _ in browser.get_cookies():
+            if _["name"] == "pt_key":
+                pt_key = _["value"]
+            elif _["name"] == "pt_pin":
+                pt_pin = _["value"]
 
         if pt_key and pt_pin:
             break
