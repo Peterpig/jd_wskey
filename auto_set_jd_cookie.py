@@ -115,7 +115,6 @@ def indify_img(background_b64, target_b64):
     )
     target_bytes = base64.b64decode(target_b64.replace("data:image/png;base64,", ""))
     res = det.slide_match(target_bytes, background_bytes, simple_target=True)
-    print(res)
     return res["target"]
 
 
@@ -130,10 +129,6 @@ def drag_and_drop_by_gui(browser, slider, offset):
         position["x"] + rect["x"] + (rect["width"] / 2),
         position["y"] + slider.location["y"] + panel_height + (rect["height"] / 2),
     )
-
-    print("position == ", position)
-    print(f"panel_height = {panel_height}")
-    print(f"Start {X}, {Y}")
     pyautogui.moveTo(X, Y)
     pyautogui.dragTo(
         X + offset, Y, random.randint(3, 5), pyautogui.easeInOutBack, button="left"
@@ -235,31 +230,30 @@ def get_ck(jd_username, jd_passwd):
         login.click()
 
         success = slider_verification(browser)
-        print("success == ", success)
         if not success:
             continue
 
-        wait.until(EC.presence_of_element_located((By.ID, "msShortcutMenu")))
-        browser.get("https://home.m.jd.com/myJd/newhome.action")
-        username2 = getElement(browser, By.CLASS_NAME, "my_header_name").text
+        # wait.until(EC.presence_of_element_located((By.ID, "msShortcutMenu")))
+        # browser.get("https://home.m.jd.com/myJd/newhome.action")
+        # username2 = getElement(browser, By.CLASS_NAME, "my_header_name").text
         break
 
     pt_key, pt_pin, cookie = "", "", ""
     for _ in browser.get_cookies():
         if _["name"] == "pt_key":
             pt_key = _["value"]
-        if _["name"] == "pt_pin":
+        elif _["name"] == "pt_pin":
             pt_pin = _["value"]
+
         if pt_key and pt_pin:
             break
 
     cookie = {
-        "username": username2,
         "pt_key": pt_key,
         "pt_pin": pt_pin,
         "__time": time.time(),
     }
-    print(f"{username2} 获取到cookie是：{cookie}")
+    print(f"获取到cookie是：{cookie}")
     browser.quit()
     return cookie
 
@@ -297,14 +291,16 @@ def set_qinglong_ck(qinglong, envlist, cookie):
     envlist = list(filter(lambda x: "name" in x and x["name"] == "JD_COOKIE", envlist))
     qinglong.set_env(data=ck_env_dict)
 
-    logger.info(f"设置{cookie['username']} cookie成功， ")
+    logger.info(f"设置cookie成功， ")
 
 
 def get_username_passwd_from_bit(bit_id):
     try:
-        out_bytes = subprocess.check_output(["bw", "get", "item", bit_id])
+        out_bytes = subprocess.check_output(
+            ["/usr/local/bin/bw", "get", "item", bit_id]
+        )
     except subprocess.CalledProcessError as e:
-        logger.error("获取bit信息失败！！")
+        logger.error("获取bit信息失败1！！")
         raise e
 
     try:
@@ -312,7 +308,7 @@ def get_username_passwd_from_bit(bit_id):
         login = info["login"]
         return login["username"], login["password"]
     except (KeyError, ValueError) as e:
-        logger.error("解析bit信息失败！！")
+        logger.error("解析bit信息失败2！！, ", out_bytes)
         raise e
 
 
