@@ -40,75 +40,6 @@ bit_id_map.json
 bit_id_map = json.load(open("./bit_id_map.json"))
 
 
-def easeInBounce(x):
-    return 1 - bounceOut(1 - x)
-
-
-def bounceOut(x):
-    n1 = 7.5625
-    d1 = 2.75
-    if x < 1 / d1:
-        return n1 * x * x
-    elif x < 2 / d1:
-        x -= 1.5 / d1
-        return n1 * x * x + 0.75
-    elif x < 2.5 / d1:
-        x -= 2.25 / d1
-        return n1 * x * x + 0.9375
-    else:
-        x -= 2.625 / d1
-        return n1 * x * x + 0.984375
-
-
-def get_tracks2(distance, seconds, ease_func):
-    tracks = [0]
-    offsets = [0]
-    for t in np.arange(0.0, seconds, 0.1):
-        ease = globals()[ease_func]
-        offset = round(ease(t / seconds) * distance)
-        tracks.append(offset - offsets[-1])
-        offsets.append(offset)
-    return offsets, tracks
-
-
-def get_tracks(distance):  # 初速度
-    v = 0
-    # 单位时间为0.2s来统计轨迹，轨迹即0.2内的位移
-    t = 0.2
-    # 位移/轨迹列表，列表内的一个元素代表0.2s的位移
-    tracks = []
-    tracks_back = []
-    # 当前的位移
-    current = 0
-    # 到达mid值开始减速
-    mid = distance * 7 / 8
-    print("distance", distance)
-    random_int = random.randint(1, 10)
-    distance += random_int  # 先滑过一点，最后再反着滑动回来
-
-    while current < distance:
-        if current < mid:
-            # 加速度越小，单位时间的位移越小,模拟的轨迹就越多越详细
-            a = random.randint(2, 5)  # 加速运动
-        else:
-            a = -random.randint(2, 5)  # 减速运动
-        # 初速度
-        v0 = v
-        # 0.2秒时间内的位移
-        s = v0 * t + 0.5 * a * (t**2)
-        # 当前的位置
-        current += s
-        # 添加到轨迹列表
-        tracks.append(round(s))
-
-        # 速度已经达到v,该速度作为下次的初速度
-        v = v0 + a * t
-
-    tracks.append(distance - current)
-    tracks.append(-random_int)
-    return tracks
-
-
 def indify_img(background_b64, target_b64):
     background_bytes = base64.b64decode(
         background_b64.replace("data:image/jpg;base64,", "")
@@ -118,38 +49,9 @@ def indify_img(background_b64, target_b64):
     return res["target"]
 
 
-def drag_and_drop_by_gui(browser, slider, offset):
-    position = browser.get_window_position()
-    panel_height = browser.execute_script(
-        "return window.outerHeight - window.innerHeight"
-    )
-    rect = slider.rect
-
-    X, Y = (
-        position["x"] + rect["x"] + (rect["width"] / 2),
-        position["y"] + slider.location["y"] + panel_height + (rect["height"] / 2),
-    )
-    pyautogui.moveTo(X, Y)
-    pyautogui.dragTo(
-        X + offset, Y, random.randint(3, 5), pyautogui.easeInOutBack, button="left"
-    )
-
-
-def drag_and_drop(browser, slider, offset):
-    action = ActionChains(browser)
-    action.click_and_hold(slider).perform()
-
-    _, tracks = get_tracks2(offset, random.uniform(1, 3), "easeInBounce")
-    for x in tracks:
-        action.move_by_offset(x, 0).perform()
-
-    time.sleep(random.random())
-    action.release().perform()
-
-
-def getElement(driver, locateType, locatorExpression):
+def getElement(driver, locateType, locatorExpression, time=10):
     try:
-        element = WebDriverWait(driver, 5).until(
+        element = WebDriverWait(driver, time).until(
             lambda x: x.find_element(by=locateType, value=locatorExpression)
         )
     except Exception as e:
@@ -166,8 +68,7 @@ def send_keys_interval(element, text, interval=0.1):
         time.sleep(random.randint(int(interval * 500), int(interval * 1500)) / 1000)
 
 
-def slider_verification(browser):
-    time.sleep(random.random())
+def slider_img(browser):
     if not getElement(browser, By.ID, "cpc_img"):
         return True
 
@@ -185,15 +86,71 @@ def slider_verification(browser):
     # distance = res[0] * 421 / 275
 
     # 500x700分辨率
-    distance = res[0] * 375 / 275
+    offset = res[0] * 375 / 275
+    position = browser.get_window_position()
+    panel_height = browser.execute_script(
+        "return window.outerHeight - window.innerHeight"
+    )
+    rect = silder.rect
 
-    drag_and_drop_by_gui(browser, silder, distance)
+    X, Y = (
+        position["x"] + rect["x"] + (rect["width"] / 2),
+        position["y"] + silder.location["y"] + panel_height + (rect["height"] / 2),
+    )
+    pyautogui.moveTo(X, Y)
+    pyautogui.dragTo(
+        X + offset, Y, random.randint(3, 5), pyautogui.easeInOutBack, button="left"
+    )
     time.sleep(random.random())
+
+
+def verify_code(browser):
+    msgBtn = getElement(browser, By.CLASS_NAME, "getMsg-btn")
+    if not (msgBtn and "获取验证码" in msgBtn.text):
+        return
+
+    msgBtn.click()
+    slider_img(browser)
+
+    logger.error("需要短信认证, 已经发送短信，请查收")
+    msgCode = getElement(browser, By.CLASS_NAME, "msgCode")
+    complete = False
+    while not complete:
+        code = msgCode.get_attribute("value")
+        logger.error(f"验证码: {code}")
+        if len(code) >= 6:
+            browser.implicitly_wait(1000)
+            btn = getElement(browser, By.CLASS_NAME, "btn")
+            btn.click()
+
+            browser.implicitly_wait(1000)
+            btn = getElement(browser, By.CLASS_NAME, "btn")
+            if btn:
+                logger.error(f"验证码错误")
+                time.sleep(60)
+                btn.click()
+
+
+def slider_verification(browser):
+    time.sleep(random.random())
+    if not getElement(browser, By.ID, "cpc_img"):
+        return True
+
+    # 安全验证
+    slider_img(browser)
+    voicemode = getElement(browser, By.CLASS_NAME, "voice-mode", 3)
+    if voicemode:
+        browser.implicitly_wait(1000)
+        logger.error("需要短信认证")
+        voicemode.click()
+        verify_code(browser)
+
     if getElement(browser, By.CLASS_NAME, "sure_btn"):
         logger.error("滑块验证失败，请手动处理验证码")
         return False
 
     elif getElement(browser, By.ID, "cpc_img"):
+        time.sleep(random.random())
         return slider_verification(browser)
 
     return True
@@ -228,6 +185,7 @@ def get_ck(jd_username, jd_passwd):
         policy.click()
         wait.until(EC.presence_of_element_located((By.CLASS_NAME, "btn-active")))
         login.click()
+        time.sleep(random.random())
 
         success = slider_verification(browser)
         if not success:
@@ -316,6 +274,7 @@ def main(*bit_users):
     envlist = qinglong.get_env()
     envlist = list(filter(lambda x: "name" in x and x["name"] == "JD_COOKIE", envlist))
 
+    # bit_users = ["楠楠"]
     for bit_username in bit_users:
         bit_id = bit_id_map.get(bit_username)
         if not bit_id:
