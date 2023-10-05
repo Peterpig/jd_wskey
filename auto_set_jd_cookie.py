@@ -49,10 +49,13 @@ def indify_img(background_b64, target_b64):
     return res["target"]
 
 
-def getElement(driver, locateType, locatorExpression, time=10):
+def getElement(driver, locateType, locatorExpression, time=5):
     try:
+        # element = WebDriverWait(driver, time).until(
+        #     lambda x: x.find_element(by=locateType, value=locatorExpression)
+        # )
         element = WebDriverWait(driver, time).until(
-            lambda x: x.find_element(by=locateType, value=locatorExpression)
+            EC.presence_of_element_located((locateType, locatorExpression))
         )
     except Exception as e:
         element = None
@@ -119,16 +122,12 @@ def verify_code(browser):
         code = msgCode.get_attribute("value")
         logger.error(f"验证码: {code}")
         if len(code) >= 6:
-            browser.implicitly_wait(1000)
             btn = getElement(browser, By.CLASS_NAME, "btn")
             btn.click()
-
-            browser.implicitly_wait(1000)
-            btn = getElement(browser, By.CLASS_NAME, "btn")
-            if btn:
-                logger.error(f"验证码错误")
-                time.sleep(60)
-                btn.click()
+            complete = True
+            logger.error(f"验证码验证成功！！")
+            break
+        time.sleep(1)
 
 
 def slider_verification(browser):
@@ -138,13 +137,13 @@ def slider_verification(browser):
 
     # 安全验证
     slider_img(browser)
-    voicemode = getElement(browser, By.CLASS_NAME, "voice-mode", 3)
+    voicemode = getElement(browser, By.CLASS_NAME, "voice-mode"。)
     if voicemode:
-        browser.implicitly_wait(1000)
         logger.error("需要短信认证")
         voicemode.click()
         verify_code(browser)
 
+    logger.error("判断中....")
     if getElement(browser, By.CLASS_NAME, "sure_btn"):
         logger.error("滑块验证失败，请手动处理验证码")
         return False
@@ -201,6 +200,9 @@ def get_ck(jd_username, jd_passwd):
                 pt_key = _["value"]
             elif _["name"] == "pt_pin":
                 pt_pin = _["value"]
+
+            if pt_key and pt_pin:
+                break
 
         if pt_key and pt_pin:
             break
