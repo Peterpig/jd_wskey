@@ -33,7 +33,7 @@ async def refresh():
 
 async def get_parse_config():
     global config_map
-    async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession(trust_env=True) as session:
         async with session.get(CONFIG_URL) as r:
             config = await r.text()
             config = yaml.load(config, Loader=yaml.FullLoader)

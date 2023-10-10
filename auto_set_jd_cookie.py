@@ -137,7 +137,7 @@ def slider_verification(browser):
 
     # 安全验证
     slider_img(browser)
-    voicemode = getElement(browser, By.CLASS_NAME, "voice-mode"。)
+    voicemode = getElement(browser, By.CLASS_NAME, "voice-mode")
     if voicemode:
         logger.error("需要短信认证")
         voicemode.click()

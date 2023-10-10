@@ -5,3 +5,10 @@ retry==0.9.2
 dotmap
 python-socks==2.3.0
 Telethon==1.28.5
+fire==0.5.0
+pyautogui==0.9.54
+ddddorc==1.4.8
+aiohttp==3.8.6
+PyYAML==6.0.1
+colorlog==6.7.0
+PySocks==1.7.1
