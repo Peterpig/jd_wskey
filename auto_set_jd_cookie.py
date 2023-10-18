@@ -88,8 +88,14 @@ def slider_img(browser):
     # 全屏
     # distance = res[0] * 421 / 275
 
-    # 500x700分辨率
-    offset = res[0] * 375 / 275
+    # cpc_img 图片属性如下
+    # Rendered size 展示的大小:	290 × 179 px
+    # Intrinsic size 原始大小:	275 × 170 px
+    # offset = res[0] * Rendered[0] / Intrinsic[0]
+    Rendered = background.get_attribute("offsetWidth")
+    Intrinsic = background.get_attribute("naturalWidth")
+
+    offset = res[0] * float(Rendered) / float(Intrinsic)
     position = browser.get_window_position()
     panel_height = browser.execute_script(
         "return window.outerHeight - window.innerHeight"
@@ -276,7 +282,6 @@ def main(*bit_users):
     envlist = qinglong.get_env()
     envlist = list(filter(lambda x: "name" in x and x["name"] == "JD_COOKIE", envlist))
 
-    # bit_users = ["楠楠"]
     for bit_username in bit_users:
         bit_id = bit_id_map.get(bit_username)
         if not bit_id:
