@@ -18,6 +18,10 @@ async def main(client):
             "chriszhuli_bot",
             "/bean yj35hqk6ip2sszfd5jxckh54nm&4npkonnsy7xi2sihztxeqryq3gxmk5cqrby26qq&kidjksa67jjv5lfj2vicj275me5ac3f4ijdgqji&4srjlxwmo6kapro6uookyfafoiuky2f2gwzew5y&4npkonnsy7xi2c5ti74jv5fnibdhqwxlnoqlpdq&ebxm5lgxoknqck745mm3flhirnosa6pgc34arfi",
         ),
+        (
+            "chriszhuli_bot",
+            "/newfarm ycXdOa_i_QXADxdQfcjGTwzE0w&ycXdOaS1kgvLXEAGeMmueKULItHx3w71-w&ycXdOShOYtl0r8D95RwUinDbe9NY&ycXdOaS1kn6tdmEgHbjbSMoZTUczvpoL&ycXdOaS1kgvBChEGLJysL9j0NDejMuiA7w&ycXdOaS1kniqb34XIKPWT2C16UM1tqFP&ycXdOaS1kni6YW8MHrLVdu6jLzPkNI85&ycXdOaS1kgnBCUAGcp-pK5w3Yk9QweI_fg",
+        ),
     ]
 
     for text in texts:
