@@ -106,11 +106,14 @@ def slider_img(browser):
         position["x"] + rect["x"] + (rect["width"] / 2),
         position["y"] + silder.location["y"] + panel_height + (rect["height"] / 2),
     )
+
+    x_ori, y_ori = pyautogui.position()
     pyautogui.moveTo(X, Y)
     pyautogui.dragTo(
         X + offset, Y, random.randint(3, 5), pyautogui.easeInOutBack, button="left"
     )
     time.sleep(random.random())
+    pyautogui.moveTo(x_ori, y_ori)
 
 
 def verify_code(browser):
