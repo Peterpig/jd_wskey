@@ -165,7 +165,7 @@ async def handler(event):
     ql.run_crons(task_ids)
 
     await asyncio.sleep(60)
-    logger.info(f"删除环境变量{name}")
+    logger.info(f"删除环境变量")
     ql.delete_env(env_id)
     logger.info(f"消息处理完毕\n")
 
