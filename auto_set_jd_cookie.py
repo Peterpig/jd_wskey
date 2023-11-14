@@ -17,6 +17,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 
 from qinglong import init_ql
 from selenium_browser import get_browser
+from slide import slide_match
 from utils import try_many_times
 
 jd_username = ""
@@ -25,9 +26,7 @@ ENV_KEEP_KEYS = {"id", "value", "name", "remarks"}
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
-import ddddocr
 
-det = ddddocr.DdddOcr(det=False, ocr=False, show_ad=False)
 
 """
 bit_id_map.json
@@ -45,7 +44,7 @@ def indify_img(background_b64, target_b64):
         background_b64.replace("data:image/jpg;base64,", "")
     )
     target_bytes = base64.b64decode(target_b64.replace("data:image/png;base64,", ""))
-    res = det.slide_match(target_bytes, background_bytes, simple_target=True)
+    res = slide_match(target_bytes, background_bytes, simple_target=True)
     return res["target"]
 
 
