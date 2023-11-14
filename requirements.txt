@@ -12,5 +12,5 @@ PyYAML==6.0.1
 colorlog==6.7.0
 PySocks==1.7.1
 opencv-python
-Pillow=9.5.0
+Pillow==9.5.0
 numpy
