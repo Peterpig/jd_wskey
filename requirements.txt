@@ -14,4 +14,4 @@ PySocks==1.7.1
 opencv-python
 Pillow==9.5.0
 numpy==1.21.6
-selenium==4.9.1
+selenium==4.11.2
