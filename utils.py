@@ -10,7 +10,7 @@ from pathlib import Path
 
 import colorlog
 import socks
-from telethon import TelegramClient
+from telethon.sync import TelegramClient
 
 TRY_TIMES = 5
 
@@ -54,7 +54,6 @@ def get_tg_client(proxy_ip=None, proxy_port=None, session_name="tg", logger=None
         )
     else:
         client = TelegramClient(session_name, api_id, api_hash, base_logger=logger)
-
     return client
 
 
@@ -106,6 +105,9 @@ def get_logger(file_name, level=logging.INFO, console=True, rotating=True):
         logger.setLevel(level)
 
     return logger
+
+
+
 
 
 # if __name__ == '__main__':

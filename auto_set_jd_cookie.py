@@ -6,11 +6,7 @@ import subprocess
 import time
 
 import fire
-import numpy as np
 import pyautogui
-from pytweening import easeInBounce, getPointOnLine
-from selenium.webdriver import ActionChains
-from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
@@ -232,7 +228,7 @@ def serch_ck(pin, envlist):
 
 
 @try_many_times(fail_exit=True)
-def set_qinglong_ck(qinglong, envlist, cookie):
+def set_qinglong_ck(qinglong, envlist, cookie, username):
     ck = (
         f"pt_key={cookie['pt_key']};pt_pin={cookie['pt_pin']};__time={cookie['__time']}"
     )
@@ -243,12 +239,12 @@ def set_qinglong_ck(qinglong, envlist, cookie):
         ck_env_dict = [{
             "value": ck,
             "name": "JD_COOKIE",
-            "remarks": f"{cookie['username']}(自动新增)",
+            "remarks": f"{username}(自动新增)",
         }]
         # fmt: one
 
         qinglong.insert_env(data=ck_env_dict)
-        logger.info(f'{ cookie["username"] } 新增cookie成功！')
+        logger.info(f'{ username } 新增cookie成功！')
         return
 
     ck_env_dict["value"] = ck
@@ -299,7 +295,8 @@ def main(*bit_users):
         logger.info(f"获取{bit_username}京东用户名密码成功， 开始获取cookie")
         cookie = get_ck(jd_username, jd_passwd)
 
-        set_qinglong_ck(qinglong, envlist, cookie)
+        set_qinglong_ck(qinglong, envlist, cookie, bit_username)
+
 
 
 if __name__ == "__main__":

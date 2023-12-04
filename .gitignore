@@ -11,10 +11,6 @@ venv/
 # vscode
 *.vscode
 
-# tg session
-*.session
-*.session-journal
-
 auto_run.json
 logs/
 *.log
