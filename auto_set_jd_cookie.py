@@ -14,7 +14,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from qinglong import init_ql
 from selenium_browser import get_browser
 from slide import slide_match
-from utils import try_many_times
+from utils import get_cookies, try_many_times
 
 jd_username = ""
 jd_passwd = ""
@@ -275,10 +275,20 @@ def get_username_passwd_from_bit(bit_id):
         raise e
 
 
-def main(*bit_users):
+async def main(*bit_users):
     qinglong = init_ql()
-    envlist = qinglong.get_env()
-    envlist = list(filter(lambda x: "name" in x and x["name"] == "JD_COOKIE", envlist))
+    envlist = await get_cookies(qinglong)
+
+    # 如果没有传要登录的账户，自动从qinglong读取过期ck
+    if not bit_users:
+        disable_cookies = list(filter(lambda x: x["status"] != 0, envlist))
+        if not disable_cookies:
+            return
+
+        bit_users = list(map(lambda x: x['remarks'].split('@')[0], disable_cookies))
+        if bit_users:
+            logger.info(f"自动从qinglong获取过期账户：{bit_users}")
+
 
     for bit_username in bit_users:
         bit_id = bit_id_map.get(bit_username)
@@ -296,7 +306,6 @@ def main(*bit_users):
         cookie = get_ck(jd_username, jd_passwd)
 
         set_qinglong_ck(qinglong, envlist, cookie, bit_username)
-
 
 
 if __name__ == "__main__":
