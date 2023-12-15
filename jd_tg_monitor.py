@@ -110,6 +110,18 @@ async def parse_message(raw_text):
     logger.info(f"获取到环境变量：{env_list}")
     return env_list, act_name
 
+async def auto_delet_env():
+    # 接收消息时，为5的倍数，清理一次
+    if datetime.datetime.now().hour / 5 != 0:
+        return
+
+    envlist = ql.get_env()
+    auto_gen_env = list(filter(lambda x: 'remarks' in x and '[AutoGen]-' in x['remarks'], envlist))
+    if auto_gen_env:
+        await asyncio.sleep(60 * 5)
+        env_id = [x['id'] for x in auto_gen_env]
+        logger.info(f"删除环境变量")
+        ql.delete_env(env_id)
 
 async def handler(event):
     raw_text = event.raw_text
@@ -165,11 +177,10 @@ async def handler(event):
     ql.run_crons(task_ids)
 
     await asyncio.sleep(60)
-    logger.info(f"删除环境变量")
-    ql.delete_env(env_id)
     logger.info(f"消息处理完毕\n")
 
     await refresh()
+    await auto_delet_env()
 
 
 async def main():
