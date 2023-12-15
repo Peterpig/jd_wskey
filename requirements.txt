@@ -1,17 +1,11 @@
--i https://pypi.douban.com/simple/
-requests==2.24.0
+requests
 fake-useragent==1.0.1
 retry==0.9.2
 dotmap
-python-socks==2.3.0
 Telethon==1.28.5
 fire==0.5.0
-pyautogui==0.9.54
-aiohttp==3.8.6
+aiohttp
+PySocks==1.7.1
+python-socks==2.3.0
 PyYAML==6.0.1
 colorlog==6.7.0
-PySocks==1.7.1
-opencv-python
-Pillow==9.5.0
-numpy==1.21.6
-selenium==4.11.2
