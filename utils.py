@@ -40,7 +40,7 @@ async def get_cookies(qinglong):
     return list(filter(lambda x: "name" in x and x["name"] == "JD_COOKIE", envs))
 
 
-def get_tg_client(proxy_ip=None, proxy_port=None, session_name="tg", logger=None):
+def get_tg_client(proxy_ip='127.0.0.1', proxy_port=7890, session_name="tg", logger=None):
     api_id = os.environ.get("tg_api_id")
     api_hash = os.environ.get("tg_api_hash")
 

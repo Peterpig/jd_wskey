@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import sys
-from typing import List
+from typing import Dict, List
 
 import requests
 from retry import retry
@@ -144,6 +144,23 @@ class Qinglong:
 
         task_ids = [str(x) for x in task_ids if x]
         response = self.request_method("put", url, data=task_ids)
+        return response
+
+    def put_cron(self, task_info: Dict[str, str]):
+        """
+            task_info = {
+                "name": "大牌1220",
+                "command": "task 6dylan6_jdpro/jd_dplh1220.js",
+                "schedule": "1 1,18 * * *",
+                "extra_schedules": null,
+                "labels": [],
+                "task_before": null,
+                "task_after": null,
+                "id": 6826
+            }
+        """
+        url = self.host + "/open/crons"
+        response = self.request_method("put", url, data=task_info)
         return response
 
 
