@@ -4,6 +4,7 @@ cron: 30 */2 * * * jd_auto_cron.py
 """
 import asyncio
 import logging
+import random
 import re
 import sys
 from datetime import datetime
@@ -38,6 +39,9 @@ async def main():
         schedule = task["schedule"]
         schedule_list = re.sub(r' {2,}', ' ', schedule).split(' ')
 
+        if len(schedule_list) not in (5, 6):
+            continue
+
         # day
         day_schema = 2 if len(schedule_list) == 5 else 3
         hour_schema = 1 if len(schedule_list) == 5 else 2
@@ -50,13 +54,14 @@ async def main():
             # 判断今天是不是不执行了
             cron = croniter(schedule_str, now)
             if (cron.get_next(datetime) - today).days >= 1:
-                schedule_list[hour_schema] = f'{schedule_list[hour_schema]},{now.hour + 1 if now.hour < 22 else now.hour}'
+                schedule_list[hour_schema] = f'{schedule_list[hour_schema]},{now.hour + random.randint(1,3) if now.hour < 20 else now.hour}'
                 schedule_list[hour_schema] = ','.join(sorted(list(set(schedule_list[hour_schema].split(',')))))
 
             task_info = {k: task[k] for k in keep_keys}
             schedule_str = ' '.join(schedule_list)
             task_info['schedule'] = schedule_str
 
+            print(task_info)
             await asyncify(qinglong.put_cron)(task_info=task_info)
 
 

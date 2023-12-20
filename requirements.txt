@@ -15,3 +15,4 @@ Pillow==9.5.0
 numpy==1.21.6
 selenium==4.11.2
 asyncer==0.0.2
+croniter==1.4.1
