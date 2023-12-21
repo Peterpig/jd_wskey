@@ -33,6 +33,7 @@ async def main():
         logger.info("获取所有任务失败！")
         sys.exit(0)
 
+    msg = []
     now = datetime.now()
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
     for task in all_task:
@@ -63,6 +64,9 @@ async def main():
 
             print(task_info)
             await asyncify(qinglong.put_cron)(task_info=task_info)
+            msg.append(f"{task_info['name']} - {schedule_str}")
+
+    send("京东脚本自动cron", "\n".join(msg))
 
 
 if __name__ == "__main__":
