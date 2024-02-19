@@ -121,6 +121,7 @@ def verify_code(browser):
 
     logger.error("需要短信认证, 已经发送短信，请查收")
     msgCode = getElement(browser, By.CLASS_NAME, "msgCode")
+    msgCode.click()
     complete = False
     while not complete:
         code = msgCode.get_attribute("value")
