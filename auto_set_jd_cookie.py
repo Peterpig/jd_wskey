@@ -222,7 +222,7 @@ def get_ck(jd_username, jd_passwd):
         "pt_pin": pt_pin,
         "__time": time.time(),
     }
-    print(f"获取到cookie是：{cookie}")
+    logger.info(f"获取到cookie是：{cookie}")
     browser.quit()
     return cookie
 
