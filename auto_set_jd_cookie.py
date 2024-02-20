@@ -260,7 +260,7 @@ def set_qinglong_ck(qinglong, envlist, cookie, username):
     envlist = list(filter(lambda x: "name" in x and x["name"] == "JD_COOKIE", envlist))
     qinglong.set_env(data=ck_env_dict)
 
-    logger.info(f"设置cookie成功， ")
+    logger.info(f"设置cookie成功:{username}")
     return f'{username}'
 
 
