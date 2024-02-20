@@ -153,7 +153,7 @@ def slider_verification(browser):
         voicemode.click()
         verify_code(browser)
 
-    logger.error("判断中....")
+    logger.info("判断中....")
     if getElement(browser, By.CLASS_NAME, "sure_btn"):
         logger.error("滑块验证失败，请手动处理验证码")
         return False
