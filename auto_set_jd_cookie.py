@@ -1,6 +1,10 @@
+import requests
 import base64
 import json
 import logging
+
+import sys
+
 import random
 import subprocess
 import time
@@ -14,14 +18,15 @@ from selenium.webdriver.support.wait import WebDriverWait
 from qinglong import init_ql
 from selenium_browser import get_browser
 from slide import slide_match
-from utils import get_cookies, try_many_times
+from utils import get_cookies, try_many_times, get_logger
 
 jd_username = ""
 jd_passwd = ""
 ENV_KEEP_KEYS = {"id", "value", "name", "remarks"}
 
-logging.basicConfig(level=logging.INFO, format="%(message)s")
-logger = logging.getLogger(__name__)
+#logging.basicConfig(level=logging.INFO, format="%(message)s")
+#logger = logging.getLogger(__name__)
+logger = get_logger(__file__.replace('.py', ''))
 
 
 """
@@ -256,6 +261,7 @@ def set_qinglong_ck(qinglong, envlist, cookie, username):
     qinglong.set_env(data=ck_env_dict)
 
     logger.info(f"设置cookie成功， ")
+    return f'{username}'
 
 
 def get_username_passwd_from_bit(bit_id):
@@ -284,12 +290,17 @@ async def main(*bit_users):
     if not bit_users:
         disable_cookies = list(filter(lambda x: x["status"] != 0, envlist))
         if not disable_cookies:
+            logger.info(f"暂未获取到过期cookie!")
             return
 
         bit_users = list(map(lambda x: x['remarks'].split('@')[0], disable_cookies))
         if bit_users:
             logger.info(f"自动从qinglong获取过期账户：{bit_users}")
 
+    msgs = []
+    if not bit_users:
+        logger.info(f"暂未获取到过期账户!")
+        return
 
     for bit_username in bit_users:
         bit_id = bit_id_map.get(bit_username)
@@ -306,8 +317,14 @@ async def main(*bit_users):
         logger.info(f"获取{bit_username}京东用户名密码成功， 开始获取cookie")
         cookie = get_ck(jd_username, jd_passwd)
 
-        set_qinglong_ck(qinglong, envlist, cookie, bit_username)
+        msg = set_qinglong_ck(qinglong, envlist, cookie, bit_username)
+        if msg:
+            msgs.append(msg)
 
+    if msgs:
+        msg_str = '\n'.join(msgs)
+        msg_str += '\nCookie设置成功!'
+        requests.get(f'https://bark.6tun.com/dvvFu9p3TvZHrHipusfUKi/京东Cookie设置成功/{msg_str}')
 
 if __name__ == "__main__":
     fire.Fire(main)

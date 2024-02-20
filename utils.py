@@ -92,12 +92,12 @@ def get_logger(file_name, level=logging.INFO, console=True, rotating=True):
             LOGGING_DIR = os.path.join(PARENT_DIR, f"logs/{file_name}")
             Path(LOGGING_DIR).mkdir(parents=True, exist_ok=True)
             file_handler = handlers.TimedRotatingFileHandler(
-                filename=os.path.join(LOGGING_DIR, today_now),
+                filename=os.path.join(LOGGING_DIR, "log"),
                 when="D",
                 interval=1,
                 backupCount=15,
             )
-            file_handler.suffix = ".log"
+            file_handler.suffix = "%Y-%m-%d.log"
             file_formatter = logging.Formatter(fmt)
             file_handler.setFormatter(file_formatter)
             logger.addHandler(file_handler)
