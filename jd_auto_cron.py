@@ -66,7 +66,7 @@ async def main():
             modify = True
             # 修改0-23/6 这种
             if "/" in schedule_list[hour_schema]:
-                schedule_list[hour_schema] = f"*/{schedule_list[hour_schema].split("/")[-1]}"
+                schedule_list[hour_schema] = f'*/{schedule_list[hour_schema].split("/")[-1]}'
 
             schedule_list[hour_schema] = f'{schedule_list[hour_schema]},{now.hour + random.randint(1,3) if now.hour < 20 else now.hour}'
             schedule_list[hour_schema] = ','.join(sorted(list(set(schedule_list[hour_schema].split(','))), key=lambda x: int(x)))
