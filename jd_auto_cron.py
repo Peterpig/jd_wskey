@@ -46,8 +46,10 @@ async def main():
         # day
         day_schema = 2 if len(schedule_list) == 5 else 3
         hour_schema = 1 if len(schedule_list) == 5 else 2
+        modify = False
 
         if schedule_list[day_schema] != "*":
+            modify = True
             # 修改为每日运行
             schedule_list[-3:] = ['*'] * len(schedule_list[-3:])
             schedule_str = ' '.join(schedule_list)
@@ -56,8 +58,17 @@ async def main():
             cron = croniter(schedule_str, now)
             if (cron.get_next(datetime) - today).days >= 1:
                 schedule_list[hour_schema] = f'{schedule_list[hour_schema]},{now.hour + random.randint(1,3) if now.hour < 20 else now.hour}'
-                schedule_list[hour_schema] = ','.join(sorted(list(set(schedule_list[hour_schema].split(',')))))
+                schedule_list[hour_schema] = ','.join(sorted(list(set(schedule_list[hour_schema].split(','))), key=lambda x: int(x)))
 
+         # 每日最少执行2次
+        if ("*" not in schedule_list[hour_schema]) \
+            and (","  not in schedule_list[hour_schema]):
+            modify = True
+            schedule_list[hour_schema] = f'{schedule_list[hour_schema]},{now.hour + random.randint(1,3) if now.hour < 20 else now.hour}'
+            schedule_list[hour_schema] = ','.join(sorted(list(set(schedule_list[hour_schema].split(','))), key=lambda x: int(x)))
+
+
+        if modify:
             task_info = {k: task[k] for k in keep_keys}
             schedule_str = ' '.join(schedule_list)
             task_info['schedule'] = schedule_str
