@@ -43,33 +43,40 @@ async def main():
         if len(schedule_list) not in (5, 6):
             continue
 
+        # if task['id'] != 9180:
+        #     continue
+
         # day
         day_schema = 2 if len(schedule_list) == 5 else 3
         hour_schema = 1 if len(schedule_list) == 5 else 2
         modify = False
 
-        if schedule_list[day_schema] != "*":
-            modify = True
-            # 修改为每日运行
-            schedule_list[-3:] = ['*'] * len(schedule_list[-3:])
-            schedule_str = ' '.join(schedule_list)
+        try:
+            if schedule_list[day_schema] != "*":
+                modify = True
+                # 修改为每日运行
+                schedule_list[-3:] = ['*'] * len(schedule_list[-3:])
+                schedule_str = ' '.join(schedule_list)
 
-            # 判断今天是不是不执行了
-            cron = croniter(schedule_str, now)
-            if (cron.get_next(datetime) - today).days >= 1:
-                schedule_list[hour_schema] = f'{schedule_list[hour_schema]},{now.hour + random.randint(1,3) if now.hour < 20 else now.hour}'
-                schedule_list[hour_schema] = ','.join(sorted(list(set(schedule_list[hour_schema].split(','))), key=lambda x: int(x)))
+                # 判断今天是不是不执行了
+                cron = croniter(schedule_str, now)
+                if (cron.get_next(datetime) - today).days >= 1:
+                    schedule_list[hour_schema] = f'{schedule_list[hour_schema]},{now.hour + random.randint(1,3) if now.hour < 20 else now.hour}'
+                    schedule_list[hour_schema] = ','.join(sorted(list(set(schedule_list[hour_schema].split(','))), key=lambda x: int(x)))
 
-         # 每日最少执行2次
-        if ("*" not in schedule_list[hour_schema]) \
-            and (","  not in schedule_list[hour_schema]):
-            modify = True
-            if "/" in schedule_list[hour_schema]:
-                # 修改0-23/6 这种
-                schedule_list[hour_schema] = f'*/{schedule_list[hour_schema].split("/")[-1]}'
-            else:
-                schedule_list[hour_schema] = f'{schedule_list[hour_schema]},{now.hour + random.randint(1,3) if now.hour < 20 else now.hour}'
-                schedule_list[hour_schema] = ','.join(sorted(list(set(schedule_list[hour_schema].split(','))), key=lambda x: int(x)))
+            # 每日最少执行2次
+            if ("*" not in schedule_list[hour_schema]) \
+                and (","  not in schedule_list[hour_schema]):
+                modify = True
+                if "/" in schedule_list[hour_schema]:
+                    # 修改0-23/6 这种
+                    schedule_list[hour_schema] = f'*/{schedule_list[hour_schema].split("/")[-1]}'
+                else:
+                    schedule_list[hour_schema] = f'{schedule_list[hour_schema]},{now.hour + random.randint(1,3) if now.hour < 20 else now.hour}'
+                    schedule_list[hour_schema] = ','.join(sorted(list(set(schedule_list[hour_schema].split(','))), key=lambda x: int(x)))
+        except Exception as e:
+            logger.error(f"task: {task}, error: {e}")
+            continue
 
 
         if modify:
