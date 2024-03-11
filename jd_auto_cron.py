@@ -84,7 +84,11 @@ async def main():
             schedule_str = ' '.join(schedule_list)
             task_info['schedule'] = schedule_str
 
-            await asyncify(qinglong.put_cron)(task_info=task_info)
+            try:
+                await asyncify(qinglong.put_cron)(task_info=task_info)
+            except Exception as e:
+                print(f"{task_info} err: {e}"
+                continue
             msg =f"{task_info['name']} - {schedule_str}"
             print(msg)
             msg_list.append(msg)
