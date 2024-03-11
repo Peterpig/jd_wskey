@@ -87,7 +87,7 @@ async def main():
             try:
                 await asyncify(qinglong.put_cron)(task_info=task_info)
             except Exception as e:
-                print(f"{task_info} err: {e}"
+                print(f"{task_info} err: {e}")
                 continue
             msg =f"{task_info['name']} - {schedule_str}"
             print(msg)
