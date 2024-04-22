@@ -1,16 +1,14 @@
-import requests
 import base64
 import json
 import logging
-
-import sys
-
 import random
 import subprocess
+import sys
 import time
 
 import fire
 import pyautogui
+import requests
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
@@ -18,7 +16,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from qinglong import init_ql
 from selenium_browser import get_browser
 from slide import slide_match
-from utils import get_cookies, try_many_times, get_logger
+from utils import get_cookies, get_logger, try_many_times
 
 jd_username = ""
 jd_passwd = ""
@@ -236,7 +234,7 @@ def serch_ck(pin, envlist):
 @try_many_times(fail_exit=True)
 def set_qinglong_ck(qinglong, envlist, cookie, username):
     ck = (
-        f"pt_key={cookie['pt_key']};pt_pin={cookie['pt_pin']};__time={cookie['__time']}"
+        f"pt_key={cookie['pt_key']};pt_pin={cookie['pt_pin']};__time={cookie['__time']};username={username};"
     )
 
     ck_env_dict = serch_ck(cookie["pt_pin"], envlist)
