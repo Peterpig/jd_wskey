@@ -108,7 +108,7 @@ def slider_img(browser):
     x_ori, y_ori = pyautogui.position()
     pyautogui.moveTo(X, Y)
     pyautogui.dragTo(
-        X + offset, Y, random.randint(1, 3), pyautogui.easeInOutBack, button="left"
+        X + offset, Y, random.randint(2, 3), pyautogui.easeInOutBack, button="left"
     )
     time.sleep(random.random())
     pyautogui.moveTo(x_ori, y_ori)
