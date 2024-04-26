@@ -156,6 +156,7 @@ def slider_verification(browser):
     logger.info("判断中....")
     if getElement(browser, By.CLASS_NAME, "sure_btn"):
         logger.error("滑块验证失败，请手动处理验证码")
+        time.sleep(random.random() * 10)
         return False
 
     elif getElement(browser, By.ID, "cpc_img"):
@@ -296,7 +297,7 @@ async def main(*bit_users):
         disable_cookies = list(filter(lambda x: x["status"] != 0, envlist))
         if not disable_cookies:
             logger.info(f"暂未获取到过期cookie!")
-            if force_refesh_start < now.hour < force_refesh_end:
+            if force_refesh_start < now < force_refesh_end:
                 bit_users = bit_id_map.keys()
 
         else:
