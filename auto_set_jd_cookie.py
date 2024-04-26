@@ -1,4 +1,6 @@
 import base64
+import datetime
+from datetime import timezone, timedelta
 import json
 import logging
 import random
@@ -283,23 +285,30 @@ def get_username_passwd_from_bit(bit_id):
 async def main(*bit_users):
     qinglong = init_ql()
     envlist = await get_cookies(qinglong)
+    beijing = timezone(timedelta(hours=8))
+    now = datetime.datetime.now(beijing)
+    force_refesh_start = now.replace(hour=1, minute=30, second=0)
+    force_refesh_end = now.replace(hour=2, minute=0, second=0)
+
 
     # 如果没有传要登录的账户，自动从qinglong读取过期ck
     if not bit_users:
         disable_cookies = list(filter(lambda x: x["status"] != 0, envlist))
         if not disable_cookies:
             logger.info(f"暂未获取到过期cookie!")
-            return
+            if force_refesh_start < now.hour < force_refesh_end:
+                bit_users = bit_id_map.keys()
 
-        bit_users = list(map(lambda x: x['remarks'].split('@')[0], disable_cookies))
-        if bit_users:
-            logger.info(f"自动从qinglong获取过期账户：{bit_users}")
+        else:
+            bit_users = list(map(lambda x: x['remarks'].split('@')[0], disable_cookies))
 
-    msgs = []
+
     if not bit_users:
         logger.info(f"暂未获取到过期账户!")
         return
 
+    msgs = []
+    logger.info(f"自动设置账户：{bit_users}")
     for bit_username in bit_users:
         bit_id = bit_id_map.get(bit_username)
         if not bit_id:
