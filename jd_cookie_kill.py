@@ -26,7 +26,7 @@ async def main():
 
     msg = "\n".join(
         [
-            f"{cookie['remarks'].split('@')[0]} cookie失效"
+            f"{cookie['remarks'].split('@')[0]} cookie 作废成功"
             for cookie in cookies
         ]
     )
