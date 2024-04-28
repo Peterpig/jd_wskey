@@ -125,6 +125,15 @@ class Qinglong:
         response = self.request_method("put", url, data=env_ids)
         return response
 
+    def disable_env(self, env_ids: List[str]):
+        url = self.host + "/open/envs/disable"
+        if not isinstance(env_ids, list):
+            env_ids = [env_ids]
+
+        env_ids = [str(x) for x in env_ids if x]
+        response = self.request_method("put", url, data=env_ids)
+        return response
+
     def enable_task(self, task_ids: List[str]):
         url = self.host + "/open/crons/enable"
         if not isinstance(task_ids, list):

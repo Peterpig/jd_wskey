@@ -1,5 +1,5 @@
 """
-new Env('京东cookie失效检测');
+new Env('京东cookie强制作废');
 cron: 30 * * * * jd_cookie_observe.py
 """
 import asyncio
@@ -20,15 +20,18 @@ async def main():
     ql = init_ql()
     cookies = await get_cookies(ql)
 
-    disable_cookies = list(filter(lambda x: x["status"] != 0, cookies))
-    if disable_cookies:
-        msg = "\n".join(
-            [
-                f"{cookie['remarks'].split('@')[0]} cookie失效"
-                for cookie in disable_cookies
-            ]
-        )
-        send("京东cookie失效", msg)
+    disable_cookies_ids = [x['id'] for x in cookies]
+    ql.disable_cookies(disable_cookies_ids)
+
+
+    msg = "\n".join(
+        [
+            f"{cookie['remarks'].split('@')[0]} cookie失效"
+            for cookie in cookies
+        ]
+    )
+    send("京东cookie强制失效", msg)
+
 
 
 if __name__ == "__main__":
