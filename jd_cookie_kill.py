@@ -21,7 +21,7 @@ async def main():
     cookies = await get_cookies(ql)
 
     disable_cookies_ids = [x['id'] for x in cookies]
-    ql.disable_cookies(disable_cookies_ids)
+    ql.disable_env(disable_cookies_ids)
 
 
     msg = "\n".join(
