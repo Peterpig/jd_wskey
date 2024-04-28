@@ -1,6 +1,6 @@
 """
 new Env('京东cookie强制作废');
-cron: 30 * * * * jd_cookie_observe.py
+cron: 1 1 * * * jd_cookie_kill.py
 """
 import asyncio
 import logging
