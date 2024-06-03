@@ -147,15 +147,75 @@ def verify_code(browser):
             break
         time.sleep(1)
 
-def save_image(src, file_name, type):
+def save_image(src, file_name):
 
     if isinstance(src, bytes):
-        with open(f"./images/{file_name}_{type}.png", "wb") as f:
+        with open(f"./images/{file_name}.png", "wb") as f:
             f.write(src)
     else:
         img_head, img_type, img_body = re.search("^(data:image\/(.+);base64),(.+)$", src).groups()
         img = Image.open(BytesIO(base64.b64decode(img_body)))
-        img.save(f"./images/{file_name}_{type}.{img_type}")
+        img.save(f"./images/{file_name}.{img_type}")
+
+
+def cpc_img_info(browser):
+     # 保存图片
+    file_name = time.strftime("%Y%m%d%H%M%S", time.localtime())
+    try:
+        tip = browser.find_element(By.CLASS_NAME, "captcha_footer").find_element(By.TAG_NAME, "img")
+        cpc_img = browser.find_element(By.ID, "cpc_img")
+        tip_screenshot_as_png = tip.screenshot_as_png
+
+        tip_src = tip.get_attribute("src")
+        img = cpc_img.get_attribute("src")
+
+        # 根据时间生成文件名
+
+        save_image(img, f"{file_name}_cpc")
+        save_image(tip_src, f"{file_name}_tip")
+        save_image(tip_screenshot_as_png, f"{file_name}_tip_screenshot")
+    except Exception as e:
+        print(e)
+        return False
+
+    img_info = {
+        "cpc": {
+            "rect": cpc_img.rect
+        },
+        "tip": {
+            "rect": tip.rect
+        },
+        "sign_span": {
+            "rect":    {},
+            "position": {}
+        }
+    }
+
+    # 获取人工打得标记
+    sign_span = getElement(browser, By.CLASS_NAME, "cs-sign-span")
+    if sign_span:
+        cpc_img = browser.find_element(By.ID, "cpc_img")
+        img_info["sign_span"]["rect"] = sign_span.rect
+        img_info["sign_span"]["position"] = {
+            "top": sign_span.value_of_css_property("top"),
+            "left": sign_span.value_of_css_property("left")
+        }
+
+        save_image(cpc_img.screenshot_as_png, f"{file_name}_cpc_screenshot")
+        sure_btn = browser.find_element(By.CLASS_NAME, "captcha_footer").find_element(By.TAG_NAME, "button")
+
+        if sure_btn:
+            logger.info("获取sign_span mark成功！登录中....")
+            sure_btn.click()
+
+            # 只要成功的数据
+            navimg = getElement(browser, By.CLASS_NAME, "nav-img")
+            if navimg:
+                with open(f"./images/{file_name}_info.json", "w+") as f:
+                    f.write(json.dumps(img_info, indent=4, ensure_ascii=False))
+                return True
+
+    return False
 
 
 def slider_verification(browser):
@@ -174,29 +234,7 @@ def slider_verification(browser):
     logger.info("判断中....")
     if getElement(browser, By.CLASS_NAME, "tip"):
         logger.error("滑块验证失败，请手动处理图形验证码!")
-
-        # 保存图形二维码
-        try:
-            tip = browser.find_element(By.CLASS_NAME, "captcha_footer").find_element(By.TAG_NAME, "img")
-            cpc_img = browser.find_element(By.ID, "cpc_img")
-            screenshot_as_png = tip.screenshot_as_png
-
-            tip = tip.get_attribute("src")
-            img = cpc_img.get_attribute("src")
-
-            # 根据时间生成文件名
-            file_name = time.strftime("%Y%m%d%H%M%S", time.localtime())
-            save_image(tip, file_name, "tip")
-            save_image(img, file_name, "cpc_img")
-            save_image(screenshot_as_png, file_name, "tip_screenshot")
-        except Exception as e:
-            print(e)
-            ...
-
-        wait = WebDriverWait(browser, timeout=30)
-        wait.until(EC.presence_of_element_located((By.CLASS_NAME, "nav-img")))
-
-        return True
+        return cpc_img_info(browser)
 
     elif getElement(browser, By.ID, "cpc_img"):
         logger.error("滑块验证失败，再次重试!")
@@ -374,5 +412,15 @@ async def main(*bit_users):
         msg_str += '\nCookie设置成功!'
         requests.get(f'https://bark.6tun.com/dvvFu9p3TvZHrHipusfUKi/京东Cookie设置成功/{msg_str}')
 
+
+async def main_local(*bit_users):
+    qinglong = init_ql()
+    envlist = await get_cookies(qinglong)
+
+
+    jd_username, jd_passwd = '15038032919', 'yP9gY9j6GYCkKzDm'
+    cookie = get_ck(jd_username, jd_passwd)
+    print(f"cookie == {cookie}")
+
 if __name__ == "__main__":
-    fire.Fire(main)
+    fire.Fire(main_local)
