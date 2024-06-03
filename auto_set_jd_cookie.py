@@ -1,16 +1,20 @@
 import base64
 import datetime
-from datetime import timezone, timedelta
 import json
 import logging
+import math
 import random
+import re
 import subprocess
 import sys
 import time
+from datetime import timedelta, timezone
+from io import BytesIO
 
 import fire
 import pyautogui
 import requests
+from PIL import Image
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
@@ -108,11 +112,15 @@ def slider_img(browser):
     )
 
     x_ori, y_ori = pyautogui.position()
+
+    random_offset = random.randint(0, 3) * random.choice([-1, 1])
+
     pyautogui.moveTo(X, Y)
     pyautogui.dragTo(
         X + offset, Y, random.randint(2, 3), pyautogui.easeInOutBack, button="left"
     )
     time.sleep(random.random())
+
     pyautogui.moveTo(x_ori, y_ori)
 
 
@@ -139,6 +147,16 @@ def verify_code(browser):
             break
         time.sleep(1)
 
+def save_image(src, file_name, type):
+
+    if isinstance(src, bytes):
+        with open(f"./images/{file_name}_{type}.png", "wb") as f:
+            f.write(src)
+    else:
+        img_head, img_type, img_body = re.search("^(data:image\/(.+);base64),(.+)$", src).groups()
+        img = Image.open(BytesIO(base64.b64decode(img_body)))
+        img.save(f"./images/{file_name}_{type}.{img_type}")
+
 
 def slider_verification(browser):
     time.sleep(random.random())
@@ -154,13 +172,35 @@ def slider_verification(browser):
         verify_code(browser)
 
     logger.info("判断中....")
-    if getElement(browser, By.CLASS_NAME, "sure_btn"):
-        logger.error("滑块验证失败，请手动处理验证码")
-        time.sleep(random.random() * 10)
-        return False
+    if getElement(browser, By.CLASS_NAME, "tip"):
+        logger.error("滑块验证失败，请手动处理图形验证码!")
+
+        # 保存图形二维码
+        try:
+            tip = browser.find_element(By.CLASS_NAME, "captcha_footer").find_element(By.TAG_NAME, "img")
+            cpc_img = browser.find_element(By.ID, "cpc_img")
+            screenshot_as_png = tip.screenshot_as_png
+
+            tip = tip.get_attribute("src")
+            img = cpc_img.get_attribute("src")
+
+            # 根据时间生成文件名
+            file_name = time.strftime("%Y%m%d%H%M%S", time.localtime())
+            save_image(tip, file_name, "tip")
+            save_image(img, file_name, "cpc_img")
+            save_image(screenshot_as_png, file_name, "tip_screenshot")
+        except Exception as e:
+            print(e)
+            ...
+
+        wait = WebDriverWait(browser, timeout=30)
+        wait.until(EC.presence_of_element_located((By.CLASS_NAME, "nav-img")))
+
+        return True
 
     elif getElement(browser, By.ID, "cpc_img"):
-        time.sleep(random.random())
+        logger.error("滑块验证失败，再次重试!")
+        time.sleep(random.random() * 10)
         return slider_verification(browser)
 
     return True
