@@ -119,8 +119,6 @@ def slider_img(browser):
     pyautogui.dragTo(
         X + offset, Y, random.randint(2, 3), pyautogui.easeInOutBack, button="left"
     )
-    time.sleep(random.random())
-
     pyautogui.moveTo(x_ori, y_ori)
 
 
@@ -225,15 +223,15 @@ def slider_verification(browser):
 
     # 安全验证
     slider_img(browser)
-    voicemode = getElement(browser, By.CLASS_NAME, "voice-mode")
-    if voicemode:
-        logger.error("需要短信认证")
-        voicemode.click()
-        verify_code(browser)
+    # voicemode = getElement(browser, By.CLASS_NAME, "voice-mode")
+    # if voicemode:
+    #     logger.error("需要短信认证")
+    #     voicemode.click()
+    #     verify_code(browser)
 
     logger.info("判断中....")
     if getElement(browser, By.CLASS_NAME, "tip"):
-        logger.error("滑块验证失败，请手动处理图形验证码!")
+        logger.info("滑块验证失败，请手动处理图形验证码!")
         return cpc_img_info(browser)
 
     elif getElement(browser, By.ID, "cpc_img"):
@@ -411,16 +409,6 @@ async def main(*bit_users):
         msg_str = '\n'.join(msgs)
         msg_str += '\nCookie设置成功!'
         requests.get(f'https://bark.6tun.com/dvvFu9p3TvZHrHipusfUKi/京东Cookie设置成功/{msg_str}')
-
-
-async def main_local(*bit_users):
-    qinglong = init_ql()
-    envlist = await get_cookies(qinglong)
-
-
-    jd_username, jd_passwd = '15038032919', 'yP9gY9j6GYCkKzDm'
-    cookie = get_ck(jd_username, jd_passwd)
-    print(f"cookie == {cookie}")
 
 if __name__ == "__main__":
     fire.Fire(main_local)
