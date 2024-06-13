@@ -148,6 +148,11 @@ class Qinglong:
         response = self.request_method("get", url)
         return response
 
+    def create_crons(self, data):
+        url = self.host + "/open/crons"
+        response = self.request_method("post", url, data=data)
+        return response
+
     def run_crons(self, task_ids: List[str]):
         url = self.host + "/open/crons/run"
 

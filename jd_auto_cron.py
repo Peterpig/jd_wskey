@@ -36,8 +36,13 @@ async def main():
     msg_list = []
     now = datetime.now()
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    has_huizong = False
     for task in all_task:
         schedule = task["schedule"]
+        command  = task["command"]
+        if "jd_bean_change_huizong" in command:
+            has_huizong = True
+
         schedule_list = re.sub(r' {2,}', ' ', schedule).split(' ')
 
         if len(schedule_list) not in (5, 6):
@@ -94,6 +99,17 @@ async def main():
             msg_list.append(msg)
 
     send("京东脚本自动cron", "\n".join(msg_list))
+
+    if not has_huizong:
+        asyncify(qinglong.create_crons)(data={
+            {
+            "command": "task 6dylan6_jdpro/jd_bean_change_huizong.js",
+            "schedule": "0 8,21 * * *",
+            "name": "jd_bean_change_huizong",
+            "labels": ""
+            }
+        })
+
 
 
 if __name__ == "__main__":
