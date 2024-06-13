@@ -102,12 +102,12 @@ async def main():
 
     if not has_huizong:
         asyncify(qinglong.create_crons)(data={
-            {
+
             "command": "task 6dylan6_jdpro/jd_bean_change_huizong.js",
             "schedule": "0 8,21 * * *",
             "name": "jd_bean_change_huizong",
             "labels": ""
-            }
+
         })
 
 
