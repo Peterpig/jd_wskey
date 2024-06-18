@@ -119,6 +119,8 @@ def slider_img(browser):
     pyautogui.dragTo(
         X + offset, Y, random.randint(2, 3), pyautogui.easeInOutBack, button="left"
     )
+    time.sleep(random.random())
+
     pyautogui.moveTo(x_ori, y_ori)
 
 
@@ -168,7 +170,6 @@ def cpc_img_info(browser):
         img = cpc_img.get_attribute("src")
 
         # 根据时间生成文件名
-
         save_image(img, f"{file_name}_cpc")
         save_image(tip_src, f"{file_name}_tip")
         save_image(tip_screenshot_as_png, f"{file_name}_tip_screenshot")
@@ -223,15 +224,15 @@ def slider_verification(browser):
 
     # 安全验证
     slider_img(browser)
-    # voicemode = getElement(browser, By.CLASS_NAME, "voice-mode")
-    # if voicemode:
-    #     logger.error("需要短信认证")
-    #     voicemode.click()
-    #     verify_code(browser)
+    voicemode = getElement(browser, By.CLASS_NAME, "voice-mode")
+    if voicemode:
+        logger.error("需要短信认证")
+        voicemode.click()
+        verify_code(browser)
 
     logger.info("判断中....")
     if getElement(browser, By.CLASS_NAME, "tip"):
-        logger.info("滑块验证失败，请手动处理图形验证码!")
+        logger.error("滑块验证失败，请手动处理图形验证码!")
         return cpc_img_info(browser)
 
     elif getElement(browser, By.ID, "cpc_img"):
@@ -252,9 +253,9 @@ def get_ck(jd_username, jd_passwd):
         browser.get("https://plogin.m.jd.com/login/login")
         logger.info("请在网页端通过手机号码登录")
 
-        wait.until(EC.presence_of_element_located((By.ID, "username")))
-        wait.until(EC.presence_of_element_located((By.ID, "pwd")))
-        wait.until(EC.presence_of_element_located((By.CLASS_NAME, "planBLogin")))
+        # wait.until(EC.presence_of_element_located((By.ID, "username")))
+        # wait.until(EC.presence_of_element_located((By.ID, "pwd")))
+        # wait.until(EC.presence_of_element_located((By.CLASS_NAME, "planBLogin")))
         wait.until(EC.presence_of_element_located((By.TAG_NAME, "a")))
 
         planBLogin = browser.find_element(By.CLASS_NAME, "planBLogin")
@@ -276,10 +277,6 @@ def get_ck(jd_username, jd_passwd):
         success = slider_verification(browser)
         if not success:
             continue
-
-        # wait.until(EC.presence_of_element_located((By.ID, "msShortcutMenu")))
-        # browser.get("https://home.m.jd.com/myJd/newhome.action")
-        # username2 = getElement(browser, By.CLASS_NAME, "my_header_name").text
 
         pt_key, pt_pin, cookie = "", "", ""
         for _ in browser.get_cookies():
@@ -303,112 +300,10 @@ def get_ck(jd_username, jd_passwd):
     browser.quit()
     return cookie
 
-
-def serch_ck(pin, envlist):
-    for env in envlist:
-        if pin in env["value"]:
-            return env
-
-
-@try_many_times(fail_exit=True)
-def set_qinglong_ck(qinglong, envlist, cookie, username):
-    ck = (
-        f"pt_key={cookie['pt_key']};pt_pin={cookie['pt_pin']};__time={cookie['__time']};username={username};"
-    )
-
-    ck_env_dict = serch_ck(cookie["pt_pin"], envlist)
-    if not ck_env_dict:
-        # fmt: off
-        ck_env_dict = [{
-            "value": ck,
-            "name": "JD_COOKIE",
-            "remarks": f"{username}(自动新增)",
-        }]
-        # fmt: one
-
-        qinglong.insert_env(data=ck_env_dict)
-        logger.info(f'{ username } 新增cookie成功！')
-        return
-
-    ck_env_dict["value"] = ck
-    ck_env_dict = {k: v for k, v in ck_env_dict.items() if k in ENV_KEEP_KEYS}
-    qinglong.set_env(data=ck_env_dict)
-
-    envlist = list(filter(lambda x: "name" in x and x["name"] == "JD_COOKIE", envlist))
-    qinglong.set_env(data=ck_env_dict)
-
-    logger.info(f"设置cookie成功:{username}")
-    return f'{username}'
-
-
-def get_username_passwd_from_bit(bit_id):
-    try:
-        out_bytes = subprocess.check_output(
-            ["/usr/local/bin/bw", "get", "item", bit_id]
-        )
-    except subprocess.CalledProcessError as e:
-        logger.error("获取bit信息失败1！！")
-        raise e
-
-    try:
-        info = json.loads(out_bytes.decode())
-        login = info["login"]
-        return login["username"], login["password"]
-    except (KeyError, ValueError) as e:
-        logger.error("解析bit信息失败2！！, ", out_bytes)
-        raise e
-
-
-async def main(*bit_users):
-    qinglong = init_ql()
-    envlist = await get_cookies(qinglong)
-    beijing = timezone(timedelta(hours=8))
-    now = datetime.datetime.now(beijing)
-    force_refesh_start = now.replace(hour=1, minute=30, second=0)
-    force_refesh_end = now.replace(hour=2, minute=0, second=0)
-
-
-    # 如果没有传要登录的账户，自动从qinglong读取过期ck
-    if not bit_users:
-        disable_cookies = list(filter(lambda x: x["status"] != 0, envlist))
-        if not disable_cookies:
-            logger.info(f"暂未获取到过期cookie!")
-            if force_refesh_start < now < force_refesh_end:
-                bit_users = bit_id_map.keys()
-
-        else:
-            bit_users = list(map(lambda x: x['remarks'].split('@')[0], disable_cookies))
-
-
-    if not bit_users:
-        logger.info(f"暂未获取到过期账户!")
-        return
-
-    msgs = []
-    logger.info(f"自动设置账户：{bit_users}")
-    for bit_username in bit_users:
-        bit_id = bit_id_map.get(bit_username)
-        if not bit_id:
-            logger.error(f"没找到{bit_username}对应的bit_id")
-            continue
-
-        try:
-            jd_username, jd_passwd = get_username_passwd_from_bit(bit_id)
-        except Exception as e:
-            logger.error(e)
-            continue
-
-        logger.info(f"获取{bit_username}京东用户名密码成功， 开始获取cookie")
-        cookie = get_ck(jd_username, jd_passwd)
-
-        msg = set_qinglong_ck(qinglong, envlist, cookie, bit_username)
-        if msg:
-            msgs.append(msg)
-
-    if msgs:
-        msg_str = '\n'.join(msgs)
-        msg_str += '\nCookie设置成功!'
-        requests.get(f'https://bark.6tun.com/dvvFu9p3TvZHrHipusfUKi/京东Cookie设置成功/{msg_str}')
+async def main_local(*bit_users):
+    users = json.load(open('jd_pass.json'))
+    for jd_username, jd_passwd in users:
+        get_ck(jd_username, jd_passwd)
 
 if __name__ == "__main__":
-    fire.Fire(main)
+    fire.Fire(main_local)
