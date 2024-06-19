@@ -190,7 +190,7 @@ def cpc_img_info(browser):
     }
 
     # 获取人工打得标记
-    sign_span = getElement(browser, By.CLASS_NAME, "cs-sign-span")
+    sign_span = getElement(browser, By.CLASS_NAME, "cs-sign-span", time=30)
     if sign_span:
         cpc_img = browser.find_element(By.ID, "cpc_img")
         img_info["sign_span"]["rect"] = sign_span.rect
