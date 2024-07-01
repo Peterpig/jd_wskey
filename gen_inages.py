@@ -85,9 +85,6 @@ def get_html_base_postion(browser):
     return position['x'], position['y'] + panel_height
 
 def slider_img(browser):
-    if not getElement(browser, By.ID, "cpc_img"):
-        return True
-
     # 安全验证
     background = browser.find_element(By.ID, "cpc_img")
     target = browser.find_element(By.ID, "small_img")
@@ -123,14 +120,15 @@ def slider_img(browser):
     logger.info(f"移动至 {x_ori, y_ori}")
 
     random_offset = random.randint(0, 3) * random.choice([-1, 1])
+    browser.switch_to.window(browser.current_window_handle)
 
     pyautogui.moveTo(X, Y)
     pyautogui.dragTo(
         X + offset, Y, random.randint(2, 3), pyautogui.easeInOutBack, button="left"
     )
     time.sleep(random.random())
-
     pyautogui.moveTo(x_ori, y_ori)
+    return True
 
 
 def verify_code(browser):
@@ -167,7 +165,6 @@ def save_image(src, file_name):
         img = Image.open(BytesIO(base64.b64decode(img_body)))
         img.save(f"./images/{file_name}.{img_type}")
         return f"./images/{file_name}.{img_type}"
-
 
 def cpc_img_info(browser):
      # 保存图片
@@ -220,6 +217,7 @@ def cpc_img_info(browser):
         Y_abs = base_y + int(cpc_img.rect['y']) + Y
 
         logger.info(f"获取到坐标 {X_abs, Y_abs} 移动鼠标 ！")
+        browser.switch_to.window(browser.current_window_handle)
         pyautogui.moveTo(X_abs, Y_abs)
         time.sleep(random.random())
         pyautogui.click()
@@ -243,7 +241,6 @@ def cpc_img_info(browser):
         if sure_btn:
             logger.info("获取sign_span mark成功！登录中....")
             sure_btn.click()
-
             # 只要成功的数据
             navimg = getElement(browser, By.CLASS_NAME, "nav-img")
             if navimg:
@@ -254,30 +251,42 @@ def cpc_img_info(browser):
     return False
 
 
-def slider_verification(browser):
+def verification(browser):
     time.sleep(random.random())
+
     if not getElement(browser, By.ID, "cpc_img"):
         return True
 
-    # 安全验证
-    slider_img(browser)
-    voicemode = getElement(browser, By.CLASS_NAME, "voice-mode")
+    voicemode = getElement(browser, By.CLASS_NAME, "voice-mode", 1)
     if voicemode:
         logger.error("需要短信认证")
         voicemode.click()
         verify_code(browser)
 
-    logger.info("判断中....")
-    if getElement(browser, By.CLASS_NAME, "tip"):
-        logger.error("滑块验证失败，请手动处理图形验证码!")
-        cpc_img_info(browser)
+    while True:
+        textTip = getElement(browser, By.CLASS_NAME, "text-tip")
 
-    elif getElement(browser, By.ID, "cpc_img"):
-        logger.error("滑块验证失败，再次重试!")
-        time.sleep(random.random() * 10)
-        return slider_verification(browser)
+        logger.info("判断中....")
+        if textTip and "拖动箭头" in textTip.text:
+            logger.info("开始滑块验证！！！")
+            res = slider_img(browser)
+            if not res:
+                continue
 
-    return True
+        if getElement(browser, By.CLASS_NAME, "tip"):
+            logger.error("滑块验证失败，开始图形识别！")
+            res = cpc_img_info(browser)
+            if not res:
+                continue
+
+        navimg = getElement(browser, By.CLASS_NAME, "nav-img")
+        if navimg:
+            return True
+
+        logger.info(f"验证失败，刷新一下")
+        jcap_refresh = getElement(browser, By.CLASS_NAME, "jcap_refresh")
+        jcap_refresh.click()
+        time.sleep(random.random())
 
 
 @try_many_times(fail_exit=True)
@@ -311,7 +320,7 @@ def get_ck(jd_username, jd_passwd):
         login.click()
         time.sleep(random.random())
 
-        success = slider_verification(browser)
+        success = verification(browser)
         if not success:
             continue
 
