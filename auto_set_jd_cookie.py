@@ -105,12 +105,11 @@ def slider_img(browser):
 
     x_ori, y_ori = pyautogui.position()
     logger.info(f"移动至 {x_ori, y_ori}")
-    random_offset = random.randint(0, 3) * random.choice([-1, 1])
     browser.switch_to.window(browser.current_window_handle)
 
     pyautogui.moveTo(X, Y)
     pyautogui.dragTo(
-        X + offset, Y, random.randint(3, 4), pyautogui.easeInOutBack, button="left"
+        X + offset, Y, random.randint(2, 3), pyautogui.easeInOutBack, button="left"
     )
     pyautogui.moveTo(x_ori, y_ori)
     return True
@@ -204,8 +203,8 @@ def cpc_img_info(browser):
         logger.info(f"获取到坐标 {X_abs, Y_abs} 移动鼠标 ！")
         browser.switch_to.window(browser.current_window_handle)
         pyautogui.moveTo(X_abs, Y_abs)
-        time.sleep(random.random())
         pyautogui.click()
+        time.sleep(random.random())
     except Exception as e:
         logger.error(e)
         return False
