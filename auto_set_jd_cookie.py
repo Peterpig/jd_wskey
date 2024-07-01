@@ -75,6 +75,14 @@ def send_keys_interval(element, text, interval=0.1):
         element.send_keys(c)
         time.sleep(random.randint(int(interval * 500), int(interval * 1500)) / 1000)
 
+# 获取html元素左上角坐标
+def get_html_base_postion(browser):
+    position = browser.get_window_position()
+    panel_height = browser.execute_script(
+        "return window.outerHeight - window.innerHeight"
+    )
+
+    return position['x'], position['y'] + panel_height
 
 def slider_img(browser):
     if not getElement(browser, By.ID, "cpc_img"):
@@ -101,15 +109,12 @@ def slider_img(browser):
     Intrinsic = background.get_attribute("naturalWidth")
 
     offset = res[0] * float(Rendered) / float(Intrinsic)
-    position = browser.get_window_position()
-    panel_height = browser.execute_script(
-        "return window.outerHeight - window.innerHeight"
-    )
+    base_x, base_y = get_html_base_postion(browser)
     rect = silder.rect
 
     X, Y = (
-        position["x"] + rect["x"] + (rect["width"] / 2),
-        position["y"] + silder.location["y"] + panel_height + (rect["height"] / 2),
+        base_x + rect["x"] + (rect["width"] / 2),
+        base_y + silder.location["y"] + (rect["height"] / 2),
     )
 
     x_ori, y_ori = pyautogui.position()
@@ -195,10 +200,20 @@ def cpc_img_info(browser):
     }
 
     try:
-        X, Y = get_X_Y(cpc_image_path, tip_image_path)
-        print(X, Y)
-        # time.sleep(100)
-    except:
+        # 计算坐标
+        res = get_X_Y(cpc_image_path, tip_image_path)
+        X, Y = res['X'], res['Y']
+
+        # chrome窗口坐标 + 图片坐标 + 鼠标偏移
+        base_x, base_y = get_html_base_postion(browser)
+        X_abs = base_x + int(cpc_img.rect['x']) + X
+        Y_abs = base_y + int(cpc_img.rect['y']) + Y
+
+        print(f"获取到坐标 {X_abs}, {Y_abs}鼠标移动 ！")
+        pyautogui.moveTo(X_abs, Y_abs)
+        pyautogui.click()
+    except Exception as e:
+        print(f"ef == {e}")
         ...
 
     # 获取人工打得标记

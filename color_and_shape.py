@@ -1,16 +1,38 @@
+import copy
+import json
+import platform
 import re
-from scipy.spatial import distance as dist
 from collections import OrderedDict
-import numpy as np
+
 import cv2
 import matplotlib.pyplot as plt
-
-
+import numpy as np
 from paddleocr import PaddleOCR
+from PIL import ImageFont
+from scipy.spatial import distance as dist
 
 color_re = re.compile(r"请选出图中(.*?色)的图形")
 shape_re = re.compile(r"请选出图中的(.*)")
 
+def get_font():
+    system = platform.system()
+
+    if system == 'Darwin':  # macOS
+        font_path = "/System/Library/Fonts/PingFang.ttc"
+    elif system == 'Windows':
+        font_path = "C:/Windows/Fonts/msyh.ttc"  # 使用微软雅黑作为替代字体
+    elif system == 'Linux':
+        font_path = "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc"
+    else:
+        raise RuntimeError(f"Unsupported OS: {system}")
+
+    try:
+        font = ImageFont.truetype(font_path, 4)
+    except IOError:
+        print(f"Font file not found at {font_path}, using default font.")
+        font = ImageFont.load_default()
+
+    return font
 
 def show_img(image):
 
@@ -130,24 +152,13 @@ class ShapeDetector:
 
         # 如果当前轮廓的点数接近圆形
         else:
-            print(f"approx == {approx}")
-            # 使用霍夫圆变换检测圆形和圆环
-            gray = cv2.cvtColor(c, cv2.COLOR_BGR2GRAY)
-            circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, dp=1, minDist=20,
-                                       param1=50, param2=30, minRadius=0, maxRadius=0)
-
-            # 如果检测到圆
-            if circles is not None:
-                circles = np.round(circles[0, :]).astype("int")
-
-                # 判断是否是圆形还是圆环
-                if len(circles) == 1:
-                    shape = "圆环"
-                elif len(circles) > 1:
-                    shape = "圆形"  # 如果检测到多个圆，认为是圆环
-
+            area = cv2.contourArea(c)
+            circle_ratio = area / (peri * peri / (4 * np.pi))
+            # 设定一个阈值，例如0.85，来判断是否为圆形
+            if circle_ratio >= 0.85:
+                shape = "圆形"
             else:
-                shape = "star"  # 否则，认为是星形
+                shape = "圆环"
 
         return shape
 
@@ -171,7 +182,6 @@ def get_tips(tip_image_path):
 
 
 def get_X_Y(cpc_image_path, tip_image_path):
-
     tip = get_tips(tip_image_path)
     if not tip:
         return
@@ -183,7 +193,7 @@ def get_X_Y(cpc_image_path, tip_image_path):
     # show_img(image)
 
     # 进行高斯模糊操作
-    blurred = cv2.GaussianBlur(image, (5, 5), 0)
+    blurred = cv2.GaussianBlur(image, (1, 1), 0)
 
     # 显示模糊后的图像
     # display(Image.fromarray(cv2.cvtColor(blurred, cv2.COLOR_BGR2RGB)))
@@ -211,6 +221,10 @@ def get_X_Y(cpc_image_path, tip_image_path):
     # 寻找轮廓
     cnts, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
+    cnts_list = []
+
+    X, Y = None, None
+
     for i, c in enumerate(cnts):
         # 计算轮廓的中心点
         M = cv2.moments(c)
@@ -218,16 +232,14 @@ def get_X_Y(cpc_image_path, tip_image_path):
             cX = int(M["m10"] / M["m00"])
             cY = int(M["m01"] / M["m00"])
             color = cl.label(lab, c)
+
             try:
                 shape = sd.detect(c)
             except Exception as e:
                 shape = None
 
-
-            if tip not in (color, shape):
-                continue
-
-            return cX, cY
+            if tip in (color, shape):
+                X, Y = cX, cY
 
             # 以下是debug 代码
             # 绘制轮廓中心点
@@ -235,8 +247,16 @@ def get_X_Y(cpc_image_path, tip_image_path):
 
             # 在原图上标记中心点位置
             cv2.putText(image, f'({cX}, {cY})', (cX - 50, cY - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 2)
 
+
+            cnts_list.append({
+                "color": color,
+                "shape": shape,
+                "cX": cX,
+                "cY": cY,
+                "image": copy.deepcopy(image)
+            })
             # 显示带标记的原始图像
             # display(Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)))
             # show_img(image)
@@ -245,15 +265,24 @@ def get_X_Y(cpc_image_path, tip_image_path):
             # print(f"{i } cX = {cX}, cY = {cY}, tip = {tip} color = {color}, shape = {shape}")
 
 
-
+    return {
+        "tip": tip,
+        "cnts_list": cnts_list,
+        "X": X,
+        "Y": Y
+    }
 
 
 if __name__ == "__main__":
 
-    p1 = '/home/hello/workspace/jd_wskey/images/20240628174419_cpc.jpg'
-    p2 = '/home/hello/workspace/jd_wskey/images/20240628174419_tip_screenshot.png'
+    p1 = '/Users/orange/workspace/jd_wskey/images/20240603152808_cpc.jpg'
+    p2 = '/Users/orange/workspace/jd_wskey/images/20240603152808_tip_screenshot.png'
 
-    tip = get_tips(p2)
-    print(tip)
+    res = get_X_Y(p1, p2)
 
-    get_X_Y(p1, p2)
+    for cnts in res['cnts_list']:
+        print(f"{cnts['shape']}, {cnts['color']}, {cnts['cX']}, {cnts['cY']}")
+        show_img(cnts["image"])
+        plt.pause(0.5)
+
+    print(res['X'], res['Y'])

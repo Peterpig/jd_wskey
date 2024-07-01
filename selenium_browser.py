@@ -48,7 +48,7 @@ def get_browser(path_prefix=""):
                 )
             elif sys.platform == "darwin":
                 _browser_ = webdriver.Chrome(
-                    # executable_path=get_file(path_prefix + "./drivers/chromedriver"),
+                    executable_path=get_file(path_prefix + "./drivers/chromedriver123.0.6312.87"),
                     desired_capabilities={},
                     options=chrome_options,
                 )

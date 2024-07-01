@@ -19,11 +19,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
+from color_and_shape import get_X_Y
 from qinglong import init_ql
 from selenium_browser import get_browser
 from slide import slide_match
 from utils import get_cookies, get_logger, try_many_times
-from color_and_shape import get_X_Y
 
 jd_username = ""
 jd_passwd = ""
@@ -75,6 +75,14 @@ def send_keys_interval(element, text, interval=0.1):
         element.send_keys(c)
         time.sleep(random.randint(int(interval * 500), int(interval * 1500)) / 1000)
 
+# 获取html元素左上角坐标
+def get_html_base_postion(browser):
+    position = browser.get_window_position()
+    panel_height = browser.execute_script(
+        "return window.outerHeight - window.innerHeight"
+    )
+
+    return position['x'], position['y'] + panel_height
 
 def slider_img(browser):
     if not getElement(browser, By.ID, "cpc_img"):
@@ -102,15 +110,13 @@ def slider_img(browser):
 
 
     offset = res[0] * float(Rendered) / float(Intrinsic)
-    position = browser.get_window_position()
-    panel_height = browser.execute_script(
-        "return window.outerHeight - window.innerHeight"
-    )
+
+    base_x, base_y = get_html_base_postion(browser)
     rect = silder.rect
 
     X, Y = (
-        position["x"] + rect["x"] + (rect["width"] / 2),
-        position["y"] + silder.location["y"] + panel_height + (rect["height"] / 2),
+        base_x + rect["x"] + (rect["width"] / 2),
+        base_y + silder.location["y"] + (rect["height"] / 2),
     )
 
     x_ori, y_ori = pyautogui.position()
@@ -196,31 +202,24 @@ def cpc_img_info(browser):
 
 
     try:
-        position = get_X_Y(cpc_image_path, tip_image_path)
+        # 计算坐标
+        res = get_X_Y(cpc_image_path, tip_image_path)
+        X, Y = res['X'], res['Y']
 
-        if not position:
-            print(f"未获取到坐标")
+        # chrome窗口坐标 + 图片坐标 + 鼠标偏移
+        base_x, base_y = get_html_base_postion(browser)
+        X_abs = base_x + int(cpc_img.rect['x']) + X
+        Y_abs = base_y + int(cpc_img.rect['y']) + Y
 
-        X, Y = position
-        print(f"获取到坐标 {X} {Y}")
-        print(cpc_img.rect['x'])
-        print(cpc_img.rect['y'])
-
-        X_abs = cpc_img.rect['x'] + X
-        Y_abs = cpc_img.rect['y'] + Y
-
-        print(f"获取到坐标 {X} {Y}，鼠标移动 去 {X_abs}, {Y_abs}")
+        print(f"获取到坐标 {X_abs}, {Y_abs}鼠标移动 ！")
         pyautogui.moveTo(X_abs, Y_abs)
-        # pyautogui.click()
-        time.sleep(100)
+        pyautogui.click()
     except Exception as e:
         print(f"ef == {e}")
         ...
 
-    print("end ~~~!!!!!")
-
     # 获取人工打得标记
-    sign_span = getElement(browser, By.CLASS_NAME, "cs-sign-span", time=600)
+    sign_span = getElement(browser, By.CLASS_NAME, "cs-sign-span", time=10)
     if sign_span:
         cpc_img = browser.find_element(By.ID, "cpc_img")
         img_info["sign_span"]["rect"] = sign_span.rect
