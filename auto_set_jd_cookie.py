@@ -118,8 +118,7 @@ def slider_img(browser):
     )
 
     x_ori, y_ori = pyautogui.position()
-    print(x_ori, y_ori)
-    logger.info(f"移动至")
+    logger.info(f"移动至 {x_ori, y_ori}")
 
     random_offset = random.randint(0, 3) * random.choice([-1, 1])
 
