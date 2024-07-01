@@ -4,7 +4,7 @@ import random
 import fire
 
 from auto_set_jd_cookie import get_ck
-from utils import get_logger
+from utils.utils import get_logger
 
 jd_username = ""
 jd_passwd = ""

@@ -61,8 +61,6 @@ class ColorLabeler:
             }
         )
 
-
-
         # 为LAB图像分配空间
         self.lab = np.zeros((len(colors), 1, 3), dtype="uint8")
         self.colorNames = []

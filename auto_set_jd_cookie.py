@@ -16,11 +16,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
-from color_and_shape import get_X_Y
 from qinglong import init_ql
 from selenium_browser import get_browser
-from slide import slide_match
-from utils import get_cookies, get_logger, try_many_times
+from utils.color_and_shape import get_X_Y
+from utils.slide import slide_match
+from utils.utils import get_cookies, get_logger, try_many_times
 
 ENV_KEEP_KEYS = {"id", "value", "name", "remarks"}
 
@@ -190,7 +190,7 @@ def cpc_img_info(browser):
         X, Y = res['X'], res['Y']
 
         if not (X and Y):
-            logger.error(f"未获到坐标：{json.dumps(res, indent=4, ensure_ascii=False)}")
+            logger.error(f"未获到坐标：{res}")
             return False
 
         logger.info(f"计算到坐标 {X, Y}")
@@ -253,18 +253,15 @@ def verification(browser):
     while True:
         textTip = getElement(browser, By.CLASS_NAME, "text-tip")
 
-        logger.info("判断中....")
+        logger.info("开始处理验证....")
         if textTip and "拖动箭头" in textTip.text:
-            logger.info("开始滑块验证！！！")
-            res = slider_img(browser)
-            if not res:
-                continue
+            logger.info("开始滑块验证....")
+            slider_img(browser)
+
 
         if getElement(browser, By.CLASS_NAME, "tip"):
-            logger.error("滑块验证失败，开始图形识别！")
-            res = cpc_img_info(browser)
-            if not res:
-                continue
+            logger.error("滑块验证失败，开始图形识别....")
+            cpc_img_info(browser)
 
         navimg = getElement(browser, By.CLASS_NAME, "nav-img")
         if navimg:

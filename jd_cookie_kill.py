@@ -6,7 +6,7 @@ import asyncio
 import logging
 
 from qinglong import init_ql
-from utils import get_cookies
+from utils.utils import get_cookies
 
 logger = logging.getLogger(__name__)
 

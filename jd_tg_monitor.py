@@ -10,7 +10,7 @@ import yaml
 from telethon import events
 
 from qinglong import init_ql
-from utils import get_logger, get_tg_client
+from utils.utils import get_logger, get_tg_client
 
 CONFIG_URL = "https://p.6tun.com/https://raw.githubusercontent.com/shufflewzc/AutoSpy/master/config/Faker.spy"
 

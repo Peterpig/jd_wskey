@@ -5,7 +5,7 @@ cron: 30 23 * * 0 tg_auto_send.py
 
 import os
 
-from utils import get_tg_client
+from utils.utils import get_tg_client
 
 
 async def main(client):
