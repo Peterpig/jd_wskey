@@ -17,3 +17,4 @@ logs/
 bit_id_map.json
 geckodriver.log
 auto_set_jd_cookie*
+run.sh
