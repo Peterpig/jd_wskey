@@ -23,6 +23,7 @@ from qinglong import init_ql
 from selenium_browser import get_browser
 from slide import slide_match
 from utils import get_cookies, get_logger, try_many_times
+from color_and_shape import get_X_Y
 
 jd_username = ""
 jd_passwd = ""
@@ -99,6 +100,7 @@ def slider_img(browser):
     Rendered = background.get_attribute("offsetWidth")
     Intrinsic = background.get_attribute("naturalWidth")
 
+
     offset = res[0] * float(Rendered) / float(Intrinsic)
     position = browser.get_window_position()
     panel_height = browser.execute_script(
@@ -152,10 +154,12 @@ def save_image(src, file_name):
     if isinstance(src, bytes):
         with open(f"./images/{file_name}.png", "wb") as f:
             f.write(src)
+        return f"./images/{file_name}.png"
     else:
         img_head, img_type, img_body = re.search("^(data:image\/(.+);base64),(.+)$", src).groups()
         img = Image.open(BytesIO(base64.b64decode(img_body)))
         img.save(f"./images/{file_name}.{img_type}")
+        return f"./images/{file_name}.{img_type}"
 
 
 def cpc_img_info(browser):
@@ -170,9 +174,9 @@ def cpc_img_info(browser):
         img = cpc_img.get_attribute("src")
 
         # 根据时间生成文件名
-        save_image(img, f"{file_name}_cpc")
+        cpc_image_path = save_image(img, f"{file_name}_cpc")
         save_image(tip_src, f"{file_name}_tip")
-        save_image(tip_screenshot_as_png, f"{file_name}_tip_screenshot")
+        tip_image_path = save_image(tip_screenshot_as_png, f"{file_name}_tip_screenshot")
     except Exception as e:
         print(e)
         return False
@@ -190,8 +194,33 @@ def cpc_img_info(browser):
         }
     }
 
+
+    try:
+        position = get_X_Y(cpc_image_path, tip_image_path)
+
+        if not position:
+            print(f"未获取到坐标")
+
+        X, Y = position
+        print(f"获取到坐标 {X} {Y}")
+        print(cpc_img.rect['x'])
+        print(cpc_img.rect['y'])
+
+        X_abs = cpc_img.rect['x'] + X
+        Y_abs = cpc_img.rect['y'] + Y
+
+        print(f"获取到坐标 {X} {Y}，鼠标移动 去 {X_abs}, {Y_abs}")
+        pyautogui.moveTo(X_abs, Y_abs)
+        # pyautogui.click()
+        time.sleep(100)
+    except Exception as e:
+        print(f"ef == {e}")
+        ...
+
+    print("end ~~~!!!!!")
+
     # 获取人工打得标记
-    sign_span = getElement(browser, By.CLASS_NAME, "cs-sign-span")
+    sign_span = getElement(browser, By.CLASS_NAME, "cs-sign-span", time=600)
     if sign_span:
         cpc_img = browser.find_element(By.ID, "cpc_img")
         img_info["sign_span"]["rect"] = sign_span.rect
@@ -233,7 +262,7 @@ def slider_verification(browser):
     logger.info("判断中....")
     if getElement(browser, By.CLASS_NAME, "tip"):
         logger.error("滑块验证失败，请手动处理图形验证码!")
-        return cpc_img_info(browser)
+        cpc_img_info(browser)
 
     elif getElement(browser, By.ID, "cpc_img"):
         logger.error("滑块验证失败，再次重试!")
@@ -302,8 +331,10 @@ def get_ck(jd_username, jd_passwd):
 
 async def main_local(*bit_users):
     users = json.load(open('jd_pass.json'))
-    for jd_username, jd_passwd in users:
-        get_ck(jd_username, jd_passwd)
+    while True:
+        user = random.choice(users)
+        print(user)
+        get_ck(*user)
 
 if __name__ == "__main__":
     fire.Fire(main_local)

@@ -44,8 +44,6 @@ def get_browser(path_prefix=""):
                 chrome_options.add_argument("--disable-gpu")
             if sys.platform == "linux":
                 _browser_ = webdriver.Chrome(
-                    executable_path=get_file(path_prefix + "./drivers/chromedriver"),
-                    desired_capabilities={},
                     options=chrome_options,
                 )
             elif sys.platform == "darwin":
@@ -92,4 +90,4 @@ def get_browser(path_prefix=""):
                     e.args.__str__(),
                 )
             )
-        sys.exit(1)
+        raise e

@@ -23,6 +23,7 @@ from qinglong import init_ql
 from selenium_browser import get_browser
 from slide import slide_match
 from utils import get_cookies, get_logger, try_many_times
+from color_and_shape import get_X_Y
 
 jd_username = ""
 jd_passwd = ""
@@ -112,12 +113,14 @@ def slider_img(browser):
     )
 
     x_ori, y_ori = pyautogui.position()
+    print(x_ori, y_ori)
+    logger.info(f"移动至")
 
     random_offset = random.randint(0, 3) * random.choice([-1, 1])
 
     pyautogui.moveTo(X, Y)
     pyautogui.dragTo(
-        X + offset, Y, random.randint(2, 3), pyautogui.easeInOutBack, button="left"
+        X + offset, Y, random.randint(3, 4), pyautogui.easeInOutBack, button="left"
     )
     pyautogui.moveTo(x_ori, y_ori)
 
@@ -150,10 +153,12 @@ def save_image(src, file_name):
     if isinstance(src, bytes):
         with open(f"./images/{file_name}.png", "wb") as f:
             f.write(src)
+        return f"./images/{file_name}.png"
     else:
         img_head, img_type, img_body = re.search("^(data:image\/(.+);base64),(.+)$", src).groups()
         img = Image.open(BytesIO(base64.b64decode(img_body)))
         img.save(f"./images/{file_name}.{img_type}")
+        return f"./images/{file_name}.{img_type}"
 
 
 def cpc_img_info(browser):
@@ -169,9 +174,9 @@ def cpc_img_info(browser):
 
         # 根据时间生成文件名
 
-        save_image(img, f"{file_name}_cpc")
+        cpc_image_path = save_image(img, f"{file_name}_cpc")
         save_image(tip_src, f"{file_name}_tip")
-        save_image(tip_screenshot_as_png, f"{file_name}_tip_screenshot")
+        tip_image_path = save_image(tip_screenshot_as_png, f"{file_name}_tip_screenshot")
     except Exception as e:
         print(e)
         return False
@@ -188,6 +193,13 @@ def cpc_img_info(browser):
             "position": {}
         }
     }
+
+    try:
+        X, Y = get_X_Y(cpc_image_path, tip_image_path)
+        print(X, Y)
+        # time.sleep(100)
+    except:
+        ...
 
     # 获取人工打得标记
     sign_span = getElement(browser, By.CLASS_NAME, "cs-sign-span", time=30)
@@ -243,7 +255,7 @@ def slider_verification(browser):
 
 
 @try_many_times(fail_exit=True)
-def get_ck(jd_username, jd_passwd):
+def get_ck(jd_username, jd_passwd\):
     browser = get_browser()
     # browser.maximize_window()
     wait = WebDriverWait(browser, timeout=20)
@@ -366,14 +378,14 @@ async def main(*bit_users):
     now = datetime.datetime.now(beijing)
     force_refesh_start = now.replace(hour=1, minute=30, second=0)
     force_refesh_end = now.replace(hour=2, minute=0, second=0)
-
+    force_refesh = True
 
     # 如果没有传要登录的账户，自动从qinglong读取过期ck
     if not bit_users:
         disable_cookies = list(filter(lambda x: x["status"] != 0, envlist))
         if not disable_cookies:
             logger.info(f"暂未获取到过期cookie!")
-            if force_refesh_start < now < force_refesh_end:
+            if force_refesh_start < now < force_refesh_end or force_refesh:
                 bit_users = bit_id_map.keys()
 
         else:
