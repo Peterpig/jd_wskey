@@ -255,7 +255,7 @@ def get_X_Y(cpc_image_path, tip_image_path):
                 "shape": shape,
                 "cX": cX,
                 "cY": cY,
-                "image": copy.deepcopy(image)
+                # "image": copy.deepcopy(image)
             })
             # 显示带标记的原始图像
             # display(Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)))

@@ -204,17 +204,26 @@ def cpc_img_info(browser):
         res = get_X_Y(cpc_image_path, tip_image_path)
         X, Y = res['X'], res['Y']
 
+        if not (X and Y):
+            logger.error(f"未获到坐标：{json.dumps(res['cnts_list'], indent=4, ensure_ascii=False)}")
+            return False
+
+        logger.info(f"计算到坐标 {X, Y}")
+
         # chrome窗口坐标 + 图片坐标 + 鼠标偏移
         base_x, base_y = get_html_base_postion(browser)
+
         X_abs = base_x + int(cpc_img.rect['x']) + X
         Y_abs = base_y + int(cpc_img.rect['y']) + Y
 
-        print(f"获取到坐标 {X_abs}, {Y_abs}鼠标移动 ！")
+        logger.info(f"获取到坐标 {X_abs, Y_abs} 移动鼠标 ！")
         pyautogui.moveTo(X_abs, Y_abs)
+        time.sleep(random.random())
         pyautogui.click()
     except Exception as e:
-        print(f"ef == {e}")
-        ...
+        logger.error(e)
+        return False
+
 
     # 获取人工打得标记
     sign_span = getElement(browser, By.CLASS_NAME, "cs-sign-span", time=30)
