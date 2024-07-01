@@ -1,12 +1,9 @@
 import base64
 import datetime
 import json
-import logging
-import math
 import random
 import re
 import subprocess
-import sys
 import time
 from datetime import timedelta, timezone
 from io import BytesIO
@@ -25,12 +22,8 @@ from selenium_browser import get_browser
 from slide import slide_match
 from utils import get_cookies, get_logger, try_many_times
 
-jd_username = ""
-jd_passwd = ""
 ENV_KEEP_KEYS = {"id", "value", "name", "remarks"}
 
-#logging.basicConfig(level=logging.INFO, format="%(message)s")
-#logger = logging.getLogger(__name__)
 logger = get_logger(__file__.replace('.py', ''))
 
 
@@ -56,9 +49,6 @@ def indify_img(background_b64, target_b64):
 
 def getElement(driver, locateType, locatorExpression, time=5):
     try:
-        # element = WebDriverWait(driver, time).until(
-        #     lambda x: x.find_element(by=locateType, value=locatorExpression)
-        # )
         element = WebDriverWait(driver, time).until(
             EC.presence_of_element_located((locateType, locatorExpression))
         )
@@ -81,7 +71,6 @@ def get_html_base_postion(browser):
     panel_height = browser.execute_script(
         "return window.outerHeight - window.innerHeight"
     )
-
     return position['x'], position['y'] + panel_height
 
 def slider_img(browser):
@@ -116,7 +105,6 @@ def slider_img(browser):
 
     x_ori, y_ori = pyautogui.position()
     logger.info(f"移动至 {x_ori, y_ori}")
-
     random_offset = random.randint(0, 3) * random.choice([-1, 1])
     browser.switch_to.window(browser.current_window_handle)
 
@@ -152,7 +140,6 @@ def verify_code(browser):
         time.sleep(1)
 
 def save_image(src, file_name):
-
     if isinstance(src, bytes):
         with open(f"./images/{file_name}.png", "wb") as f:
             f.write(src)
