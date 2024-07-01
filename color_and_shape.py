@@ -168,7 +168,7 @@ sd = ShapeDetector()
 ocr = PaddleOCR(use_angle_cls=False, lang="ch", show_log=False)
 
 def get_tips(tip_image_path):
-    result = ocr.ocr(tip_image_path)
+    result = ocr.ocr(tip_image_path, cls=False)
     try:
         text = result[0][0][1][0]
     except:
