@@ -10,8 +10,6 @@ jd_username = ""
 jd_passwd = ""
 ENV_KEEP_KEYS = {"id", "value", "name", "remarks"}
 
-#logging.basicConfig(level=logging.INFO, format="%(message)s")
-#logger = logging.getLogger(__name__)
 logger = get_logger(__file__.replace('.py', ''))
 
 
