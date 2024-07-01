@@ -204,7 +204,7 @@ def cpc_img_info(browser):
         X, Y = res['X'], res['Y']
 
         if not (X and Y):
-            logger.error(f"未获到坐标：{json.dumps(res['cnts_list'], indent=4, ensure_ascii=False)}")
+            logger.error(f"未获到坐标：{json.dumps(res, indent=4, ensure_ascii=False)}")
             return False
 
         logger.info(f"计算到坐标 {X, Y}")
