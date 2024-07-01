@@ -19,11 +19,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
+from color_and_shape import get_X_Y
 from qinglong import init_ql
 from selenium_browser import get_browser
 from slide import slide_match
 from utils import get_cookies, get_logger, try_many_times
-from color_and_shape import get_X_Y
 
 jd_username = ""
 jd_passwd = ""
@@ -255,7 +255,7 @@ def slider_verification(browser):
 
 
 @try_many_times(fail_exit=True)
-def get_ck(jd_username, jd_passwd\):
+def get_ck(jd_username, jd_passwd):
     browser = get_browser()
     # browser.maximize_window()
     wait = WebDriverWait(browser, timeout=20)
