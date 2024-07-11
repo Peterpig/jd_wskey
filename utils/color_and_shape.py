@@ -5,14 +5,26 @@ import re
 from collections import OrderedDict
 
 import cv2
+import ddddocr
 import matplotlib.pyplot as plt
 import numpy as np
 from paddleocr import PaddleOCR
 from PIL import ImageFont
 from scipy.spatial import distance as dist
 
+from utils.utils import get_logger
+
+from .chaojiying import chaojiying_client
+
+logger = get_logger(__file__.replace('.py', ''))
+
 color_re = re.compile(r"请选出图中(.*?色)的图形")
 shape_re = re.compile(r"请选出图中的(.*)")
+sequential_re = re.compile(r'依次选出"(.*)"')
+
+detModel = None
+ocrModel = None
+
 
 def get_font():
     system = platform.system()
@@ -34,14 +46,19 @@ def get_font():
 
     return font
 
-def show_img(image):
+def show_img(image, title=None):
 
     # 如果使用OpenCV加载的是BGR格式，转换为RGB格式
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     # 显示图像
+    plt.figure(figsize=(2, 1))
     plt.imshow(image_rgb)
+    if title:
+        plt.title(title)
     plt.axis('off')  # 可选：关闭坐标轴
-    plt.show()
+    plt.show(block=False)
+    plt.pause(1)
+    plt.close()
 
 
 # 创建一个颜色标签类
@@ -163,26 +180,40 @@ class ShapeDetector:
 
 cl = ColorLabeler()
 sd = ShapeDetector()
-ocr = PaddleOCR(use_angle_cls=False, lang="ch", show_log=False)
+paddle_ocr = None
 
 def get_tips(tip_image_path):
-    result = ocr.ocr(tip_image_path, cls=False)
+    global paddle_ocr
+    if not paddle_ocr:
+        paddle_ocr = PaddleOCR(use_angle_cls=False, lang="ch", show_log=False)
+
+    result = paddle_ocr.ocr(tip_image_path, cls=False)
     try:
         text = result[0][0][1][0]
     except:
         return
 
+    text = text.replace("“", "\"").replace("”", "\"")
+    tip_type = None
     if color_re.search(text):
         text = color_re.search(text).group(1)
+        tip_type = 'color'
+
     elif shape_re.search(text):
         text = shape_re.search(text).group(1)
-    return text
+        tip_type = 'shape'
+
+    elif sequential_re.search(text):
+        text = sequential_re.search(text).group(1)
+        tip_type = 'sequential'
+
+    else:
+        text = ""
+
+    return text, tip_type
 
 
-def get_X_Y(cpc_image_path, tip_image_path):
-    tip = get_tips(tip_image_path)
-    if not tip:
-        return
+def get_X_Y(cpc_image_path, tip):
 
     image = cv2.imread(cpc_image_path)
 
@@ -270,6 +301,71 @@ def get_X_Y(cpc_image_path, tip_image_path):
         "Y": Y
     }
 
+
+def get_text_by_tips(cpc_image_path, tips):
+    split_tips = {tip: None for tip in tips}
+
+    global detModel
+    global ocrModel
+    if detModel is None:
+        detModel = ddddocr.DdddOcr(det=True, show_ad=False)
+        ocrModel  = ddddocr.DdddOcr(show_ad=False)
+
+
+    image = cv2.imread(cpc_image_path)
+    _, image_bytes = cv2.imencode('.jpg', image)
+
+    bboxes = detModel.detection(image_bytes.tobytes())
+
+
+    remaining_bboxes = []
+    for index, bbox in enumerate(bboxes):
+        x1, y1, x2, y2 = bbox
+        cropped_image = image[y1:y2, x1:x2]
+        _, cropped_image_bytes = cv2.imencode('.jpg', cropped_image)
+        result = ocrModel.classification(cropped_image_bytes.tobytes())
+
+        postion_info = {
+            "x1": x1,
+            "y1": y1,
+            "x2": x2,
+            "y2": y2,
+            "x": int((x1 + x2) / 2),
+            "y": int((y1 + y2) / 2),
+            "index": index,
+        }
+        if result in split_tips:
+            split_tips[result] = postion_info
+        else:
+            remaining_bboxes.append(postion_info)
+
+    if remaining_bboxes:
+        split_tips = {tip: None for tip in tips}
+        im = open(cpc_image_path, 'rb').read()
+        res = chaojiying_client.PostPic(im, 9501)
+
+        # for tip, value in split_tips.items():
+        #     if value is None:
+        #         split_tips[tip] = remaining_bboxes.pop(0)
+
+        if res['err_no'] == 0:
+            logger.info(f"调用超级鹰识别成功，错误码为: {res}")
+            try:
+                pic_id = res['pic_id']
+                pic_str = res['pic_str']
+                pic_list = pic_str.split("|")
+                pic_dict = { pic.split(",")[0]: (pic.split(",")[1:]) for pic in pic_list}
+                for key in split_tips:
+                    split_tips[key] = {
+                        "x": int(pic_dict[key][0]),
+                        "y": int(pic_dict[key][1]),
+                    }
+            except Exception as e:
+                logger.error(f"调用超级鹰识别失败，错误码为: {res}")
+                pic_id = res['pic_id']
+                chaojiying_client.ReportError(pic_id)
+
+    return split_tips, pic_id
 
 if __name__ == "__main__":
 

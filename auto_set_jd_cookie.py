@@ -18,7 +18,8 @@ from selenium.webdriver.support.wait import WebDriverWait
 
 from qinglong import init_ql
 from selenium_browser import get_browser
-from utils.color_and_shape import get_X_Y
+from utils.chaojiying import chaojiying_client
+from utils.color_and_shape import get_text_by_tips, get_tips, get_X_Y
 from utils.slide import slide_match
 from utils.utils import get_cookies, get_logger, try_many_times
 
@@ -183,31 +184,66 @@ def cpc_img_info(browser):
         }
     }
 
-    try:
-        # 计算坐标
-        res = get_X_Y(cpc_image_path, tip_image_path)
+
+    tip, tip_type = get_tips(tip_image_path)
+    if not tip:
+        return
+
+    targets = []
+    pic_id = None
+    if tip_type == 'sequential':
+        res, pic_id = get_text_by_tips(cpc_image_path, tip)
+        if not res:
+            return
+        targets = [(postion['x'], postion['y']) for tip, postion in res.items()]
+    else:
+        res = get_X_Y(cpc_image_path, tip)
         X, Y = res['X'], res['Y']
+        targets.append((X, Y))
 
-        if not (X and Y):
-            logger.error(f"未获到坐标：{res}")
-            return False
+    # chrome窗口坐标 + 图片坐标 + 鼠标偏移
+    base_x, base_y = get_html_base_postion(browser)
+    rect_x, rect_y = int(cpc_img.rect['x']), int(cpc_img.rect['y'])
 
-        logger.info(f"计算到坐标 {X, Y}")
+    if not targets:
+        logger.error(f"未获到坐标")
+        return False
 
-        # chrome窗口坐标 + 图片坐标 + 鼠标偏移
-        base_x, base_y = get_html_base_postion(browser)
+    for target in targets:
+        X_abs = base_x + rect_x + target[0]
+        Y_abs = base_y + rect_y + target[1]
 
-        X_abs = base_x + int(cpc_img.rect['x']) + X
-        Y_abs = base_y + int(cpc_img.rect['y']) + Y
-
-        logger.info(f"获取到坐标 {X_abs, Y_abs} 移动鼠标 ！")
         browser.switch_to.window(browser.current_window_handle)
         pyautogui.moveTo(X_abs, Y_abs)
         pyautogui.click()
         time.sleep(random.random())
-    except Exception as e:
-        logger.error(e)
-        return False
+
+    # try:
+
+    #     # 计算坐标
+    #     res = get_X_Y(cpc_image_path, tip_image_path)
+    #     X, Y = res['X'], res['Y']
+
+    #     if not (X and Y):
+    #         logger.error(f"未获到坐标：{res}")
+    #         return False
+
+    #     logger.info(f"计算到坐标 {X, Y}")
+
+    #     # chrome窗口坐标 + 图片坐标 + 鼠标偏移
+    #     base_x, base_y = get_html_base_postion(browser)
+
+    #     X_abs = base_x + int(cpc_img.rect['x']) + X
+    #     Y_abs = base_y + int(cpc_img.rect['y']) + Y
+
+    #     logger.info(f"获取到坐标 {X_abs, Y_abs} 移动鼠标 ！")
+    #     browser.switch_to.window(browser.current_window_handle)
+    #     pyautogui.moveTo(X_abs, Y_abs)
+    #     pyautogui.click()
+    #     time.sleep(random.random())
+    # except Exception as e:
+    #     logger.error(e)
+    #     return False
 
 
     # 获取人工打得标记
@@ -228,11 +264,19 @@ def cpc_img_info(browser):
             sure_btn.click()
 
             # 只要成功的数据
-            navimg = getElement(browser, By.CLASS_NAME, "nav-img")
-            if navimg:
-                with open(f"./images/{file_name}_info.json", "w+") as f:
-                    f.write(json.dumps(img_info, indent=4, ensure_ascii=False))
-                return True
+            try:
+                navimg = getElement(browser, By.CLASS_NAME, "nav-img")
+                if navimg:
+                    with open(f"./images/{file_name}_info.json", "w+") as f:
+                        f.write(json.dumps(img_info, indent=4, ensure_ascii=False))
+                    return True
+                elif pic_id:
+                    chaojiying_client.ReportError(pic_id)
+                    return False
+            except:
+                if pic_id:
+                    chaojiying_client.ReportError(pic_id)
+                return False
 
     return False
 
