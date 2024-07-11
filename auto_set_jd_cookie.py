@@ -48,11 +48,16 @@ def indify_img(background_b64, target_b64):
     return res["target"]
 
 
-def getElement(driver, locateType, locatorExpression, time=5):
+def getElement(driver, locateType, locatorExpression, time=5, all=False):
     try:
-        element = WebDriverWait(driver, time).until(
-            EC.presence_of_element_located((locateType, locatorExpression))
-        )
+        if all:
+            element = WebDriverWait(driver, time).until(
+                EC.presence_of_all_elements_located((locateType, locatorExpression))
+            )
+        else:
+            element = WebDriverWait(driver, time).until(
+                EC.presence_of_element_located((locateType, locatorExpression))
+            )
     except Exception as e:
         element = None
     return element
@@ -178,14 +183,17 @@ def cpc_img_info(browser):
         "tip": {
             "rect": tip.rect
         },
-        "sign_span": {
-            "rect":    {},
-            "position": {}
-        }
+        "sign_span": [
+            # {
+            #     "rect":    {},
+            #     "position": {}
+            # }
+        ]
     }
 
 
     tip, tip_type = get_tips(tip_image_path)
+    logger.info(f"获取到tip: {tip}, type: {tip_type}")
     if not tip:
         return
 
@@ -247,14 +255,19 @@ def cpc_img_info(browser):
 
 
     # 获取人工打得标记
-    sign_span = getElement(browser, By.CLASS_NAME, "cs-sign-span", time=30)
+    sign_span = getElement(browser, By.CLASS_NAME, "cs-sign-span", time=10, all=True)
     if sign_span:
         cpc_img = browser.find_element(By.ID, "cpc_img")
-        img_info["sign_span"]["rect"] = sign_span.rect
-        img_info["sign_span"]["position"] = {
-            "top": sign_span.value_of_css_property("top"),
-            "left": sign_span.value_of_css_property("left")
-        }
+        for sign in sign_span:
+            img_info["sign_span"].append(
+                {
+                    "rect": sign.rect,
+                    "position": {
+                        "top": sign.value_of_css_property("top"),
+                        "left": sign.value_of_css_property("left")
+                    }
+                }
+            )
 
         save_image(cpc_img.screenshot_as_png, f"{file_name}_cpc_screenshot")
         sure_btn = browser.find_element(By.CLASS_NAME, "captcha_footer").find_element(By.TAG_NAME, "button")
