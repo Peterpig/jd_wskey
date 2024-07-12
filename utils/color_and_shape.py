@@ -20,7 +20,7 @@ logger = get_logger(__file__.replace('.py', ''))
 
 color_re = re.compile(r"请选出图中(.*?色)的图形")
 shape_re = re.compile(r"请选出图中的(.*)")
-sequential_re = re.compile(r'依次选出"(.*)"')
+sequential_re = re.compile(r'依次选出"?(.*)"?')
 
 detModel = None
 ocrModel = None
@@ -193,7 +193,7 @@ def get_tips(tip_image_path):
     except:
         return
 
-    text = text.replace("“", "\"").replace("”", "\"")
+    text = text.replace("“", "\"").replace("”", "\"").replace("'", "\"").replace("\'", "\"")
     tip_type = None
     if color_re.search(text):
         text = color_re.search(text).group(1)
@@ -208,6 +208,7 @@ def get_tips(tip_image_path):
         tip_type = 'sequential'
 
     else:
+        print(f"为解析到 text == {text}")
         text = ""
 
     return text, tip_type
