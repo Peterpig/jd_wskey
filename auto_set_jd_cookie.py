@@ -204,8 +204,10 @@ def cpc_img_info(browser):
         if not res:
             return
         try:
-            tqlargets = [(postion['x'], postion['y']) for tip, postion in res.items()]
+            targets = [(postion['x'], postion['y']) for tip, postion in res.items()]
         except Exception as e:
+            if pic_id:
+                chaojiying_client.ReportError(pic_id)
             return False
     else:
         res = get_X_Y(cpc_image_path, tip)
