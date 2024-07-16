@@ -197,37 +197,37 @@ def cpc_img_info(browser):
     if not tip:
         return
 
-    targets = []
-    pic_id = None
-    if tip_type == 'sequential':
-        res, pic_id = get_text_by_tips(cpc_image_path, tip)
-        if not res:
-            return
-        try:
-            targets = [(postion['x'], postion['y']) for tip, postion in res.items()]
-        except Exception as e:
-            return False
-    else:
-        res = get_X_Y(cpc_image_path, tip)
-        X, Y = res['X'], res['Y']
-        targets.append((X, Y))
+    # targets = []
+    # pic_id = None
+    # if tip_type == 'sequential':
+    #     res, pic_id = get_text_by_tips(cpc_image_path, tip)
+    #     if not res:
+    #         return
+    #     try:
+    #         targets = [(postion['x'], postion['y']) for tip, postion in res.items()]
+    #     except Exception as e:
+    #         return False
+    # else:
+    #     res = get_X_Y(cpc_image_path, tip)
+    #     X, Y = res['X'], res['Y']
+    #     targets.append((X, Y))
 
-    # chrome窗口坐标 + 图片坐标 + 鼠标偏移
-    base_x, base_y = get_html_base_postion(browser)
-    rect_x, rect_y = int(cpc_img.rect['x']), int(cpc_img.rect['y'])
+    # # chrome窗口坐标 + 图片坐标 + 鼠标偏移
+    # base_x, base_y = get_html_base_postion(browser)
+    # rect_x, rect_y = int(cpc_img.rect['x']), int(cpc_img.rect['y'])
 
-    if not targets:
-        logger.error(f"未获到坐标")
-        return False
+    # if not targets:
+    #     logger.error(f"未获到坐标")
+    #     return False
 
-    for target in targets:
-        X_abs = base_x + rect_x + target[0]
-        Y_abs = base_y + rect_y + target[1]
+    # for target in targets:
+    #     X_abs = base_x + rect_x + target[0]
+    #     Y_abs = base_y + rect_y + target[1]
 
-        browser.switch_to.window(browser.current_window_handle)
-        pyautogui.moveTo(X_abs, Y_abs)
-        pyautogui.click()
-        time.sleep(random.random())
+    #     browser.switch_to.window(browser.current_window_handle)
+    #     pyautogui.moveTo(X_abs, Y_abs)
+    #     pyautogui.click()
+    #     time.sleep(random.random())
 
     # try:
 

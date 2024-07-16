@@ -349,7 +349,7 @@ def get_text_by_tips(cpc_image_path, tips):
         #     if value is None:
         #         split_tips[tip] = remaining_bboxes.pop(0)
 
-        if res['err_no'] == 0:
+        if res and res['err_no'] == 0:
             logger.info(f"调用超级鹰识别成功，错误码为: {res}")
             try:
                 pic_id = res['pic_id']
