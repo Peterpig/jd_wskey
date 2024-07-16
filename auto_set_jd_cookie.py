@@ -203,7 +203,10 @@ def cpc_img_info(browser):
         res, pic_id = get_text_by_tips(cpc_image_path, tip)
         if not res:
             return
-        targets = [(postion['x'], postion['y']) for tip, postion in res.items()]
+        try:
+            tqlargets = [(postion['x'], postion['y']) for tip, postion in res.items()]
+        except Exception as e:
+            return False
     else:
         res = get_X_Y(cpc_image_path, tip)
         X, Y = res['X'], res['Y']
