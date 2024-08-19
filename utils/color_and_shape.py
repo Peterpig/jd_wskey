@@ -304,7 +304,8 @@ def get_X_Y(cpc_image_path, tip):
 
 
 def get_text_by_tips(cpc_image_path, tips):
-    split_tips = {tip: None for tip in tips}
+    split_tips = [tip for tip in tips]
+    print(f"split_tips == {split_tips}")
 
     global detModel
     global ocrModel
@@ -322,10 +323,7 @@ def get_text_by_tips(cpc_image_path, tips):
 
     bboxes = detModel.detection(image_bytes.tobytes())
 
-
-
-    remaining_bboxes = []
-    cropped_image_bytes = None
+    ret = []
     for index, bbox in enumerate(bboxes):
         x1, y1, x2, y2 = bbox
         buffer = 5
@@ -333,18 +331,18 @@ def get_text_by_tips(cpc_image_path, tips):
             try:
                 cropped_image = image[y1-buffer: y2+buffer, x1-buffer: x2+buffer]
                 _, cropped_image_bytes = cv2.imencode('.jpg', cropped_image)
+                result = ocrModel.classification(cropped_image_bytes.tobytes())
+
+                if (not result) or (result not in split_tips):
+                    result = ocrModel2.classification(cropped_image_bytes.tobytes())
+
                 break
             except:
                 buffer -= 1
 
+        if not result:
+            continue
 
-        if not cropped_image_bytes:
-            return
-
-        result = ocrModel.classification(cropped_image_bytes.tobytes())
-
-        if result not in split_tips:
-            result = ocrModel2.classification(cropped_image_bytes.tobytes())
 
         postion_info = {
             "x1": x1,
@@ -357,16 +355,13 @@ def get_text_by_tips(cpc_image_path, tips):
         }
 
         if result in split_tips:
-            split_tips[result] = postion_info
-        else:
-            remaining_bboxes.append(postion_info)
+            ret.append((result, postion_info))
 
-    if remaining_bboxes:
-        for tip, value in split_tips.items():
-            if value is None:
-                split_tips[tip] = remaining_bboxes.pop(0)
-
-    return split_tips
+    # if remaining_bboxes:
+    #     for tip, value in split_tips.items():
+    #         if value is None:
+    #             split_tips[tip] = remaining_bboxes.pop(0)
+    return sorted(ret, key=lambda x: split_tips.index(x[0]))
 
 if __name__ == "__main__":
 

@@ -142,10 +142,10 @@ def cpc_img_info(browser):
         target_num = 4
         res = get_text_by_tips(cpc_image_path, tip)
         print(f"res == {json.dumps(res, indent=2, ensure_ascii=False)}")
-        if not res:
+        if (not res) or (len(res) != target_num):
            return
         try:
-            targets = [(postion['x'], postion['y']) for tip, postion in res.items()]
+            targets = [(postion['x'], postion['y']) for tip, postion in res]
         except Exception as e:
             return False
     else:
@@ -241,13 +241,13 @@ def verification(browser):
             logger.error("滑块验证失败，开始图形识别....")
             cpc_img_info(browser)
 
-        navimg = getElement(browser, By.CLASS_NAME, "nav-img", time=1)
+        navimg = getElement(browser, By.CLASS_NAME, "nav-img")
         if navimg:
             return True
 
-        # logger.info(f"验证失败，刷新一下")
-        # jcap_refresh = getElement(browser, By.CLASS_NAME, "jcap_refresh")
-        # jcap_refresh.click()
+        logger.info(f"验证失败，刷新一下")
+        jcap_refresh = getElement(browser, By.CLASS_NAME, "jcap_refresh")
+        jcap_refresh.click()
         time.sleep(random.random())
 
 
