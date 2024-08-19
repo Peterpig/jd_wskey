@@ -1,11 +1,8 @@
 import base64
-import datetime
 import json
 import random
 import re
-import subprocess
 import time
-from datetime import timedelta, timezone
 from io import BytesIO
 
 import fire
@@ -21,6 +18,7 @@ from selenium_browser import get_browser
 from utils.color_and_shape import get_text_by_tips, get_tips, get_X_Y
 from utils.slide import slide_match
 from utils.utils import get_cookies, get_logger, try_many_times
+from utils.bitwarden import get_username_passwd_from_bit
 
 ENV_KEEP_KEYS = {"id", "value", "name", "remarks"}
 
@@ -398,48 +396,21 @@ def set_qinglong_ck(qinglong, envlist, cookie, username):
     ck_env_dict = {k: v for k, v in ck_env_dict.items() if k in ENV_KEEP_KEYS}
     qinglong.set_env(data=ck_env_dict)
 
-    envlist = list(filter(lambda x: "name" in x and x["name"] == "JD_COOKIE", envlist))
-    qinglong.set_env(data=ck_env_dict)
-
     logger.info(f"设置cookie成功:{username}")
     return f'{username}'
 
-
-def get_username_passwd_from_bit(bit_id):
-    try:
-        out_bytes = subprocess.check_output(
-            ["/usr/local/bin/bw", "get", "item", bit_id]
-        )
-    except subprocess.CalledProcessError as e:
-        logger.error("获取bit信息失败1！！")
-        raise e
-
-    try:
-        info = json.loads(out_bytes.decode())
-        login = info["login"]
-        return login["username"], login["password"]
-    except (KeyError, ValueError) as e:
-        logger.error("解析bit信息失败2！！, ", out_bytes)
-        raise e
 
 
 async def main(*bit_users):
     qinglong = init_ql()
     envlist = await get_cookies(qinglong)
-    beijing = timezone(timedelta(hours=8))
-    now = datetime.datetime.now(beijing)
-    force_refesh_start = now.replace(hour=1, minute=30, second=0)
-    force_refesh_end = now.replace(hour=2, minute=0, second=0)
-    force_refesh = True
 
     # 如果没有传要登录的账户，自动从qinglong读取过期ck
     if not bit_users:
         disable_cookies = list(filter(lambda x: x["status"] != 0, envlist))
         if not disable_cookies:
-            logger.info(f"暂未获取到过期cookie!")
-            if force_refesh_start < now < force_refesh_end or force_refesh:
-                bit_users = bit_id_map.keys()
-
+            logger.info(f"暂未获取到过期cookie，全部更新！")
+            bit_users = bit_id_map.keys()
         else:
             bit_users = list(map(lambda x: x['remarks'].split('@')[0], disable_cookies))
 
