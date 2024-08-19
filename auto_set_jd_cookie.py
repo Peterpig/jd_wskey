@@ -16,7 +16,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from qinglong import init_ql
 from utils.selenium_browser import get_browser
 from utils.color_and_shape import get_text_by_tips, get_tips, get_X_Y
-from utils.slide import slider_img
+from utils.slide import slider_img, get_html_base_postion
 from utils.utils import get_cookies, get_logger, try_many_times
 from utils.bitwarden import get_username_passwd_from_bit
 
@@ -140,44 +140,49 @@ def cpc_img_info(browser):
 
     if tip_type == 'sequential':
         target_num = 4
-        # res, pic_id = get_text_by_tips(cpc_image_path, tip)
-        # if not res:
-        #    return
-        # try:
-        #     targets = [(postion['x'], postion['y']) for tip, postion in res.items()]
-        # except Exception as e:
-        #     return False
+        res = get_text_by_tips(cpc_image_path, tip)
+        print(f"res == {json.dumps(res, indent=2, ensure_ascii=False)}")
+        if not res:
+           return
+        try:
+            targets = [(postion['x'], postion['y']) for tip, postion in res.items()]
+        except Exception as e:
+            return False
     else:
         res = get_X_Y(cpc_image_path, tip)
         X, Y = res['X'], res['Y']
         targets.append((X, Y))
 
-    # # chrome窗口坐标 + 图片坐标 + 鼠标偏移
-    # base_x, base_y = get_html_base_postion(browser)
-    # rect_x, rect_y = int(cpc_img.rect['x']), int(cpc_img.rect['y'])
+    # chrome窗口坐标 + 图片坐标 + 鼠标偏移
+    base_x, base_y = get_html_base_postion(browser)
+    rect_x, rect_y = int(cpc_img.rect['x']), int(cpc_img.rect['y'])
 
-    # if not targets:
-    #     logger.error(f"未获到坐标")
-    #     return False
+    if not targets:
+        logger.error(f"未获到坐标")
+        return False
 
-    # for target in targets:
-    #     X_abs = base_x + rect_x + target[0]
-    #     Y_abs = base_y + rect_y + target[1]
+    for target in targets:
+        X_abs = base_x + rect_x + target[0]
+        Y_abs = base_y + rect_y + target[1]
 
-    #     browser.switch_to.window(browser.current_window_handle)
-    #     pyautogui.moveTo(X_abs, Y_abs)
-    #     pyautogui.click()
-    #     time.sleep(random.random())
-
+        browser.switch_to.window(browser.current_window_handle)
+        pyautogui.moveTo(X_abs, Y_abs)
+        pyautogui.click()
+        time.sleep(random.random())
 
 
     # 获取人工打得标记
-    sign_span = None
-    while True:
-        sign_span = getElement(browser, By.CLASS_NAME, "cs-sign-span", time=20, all=True)
+    sign_span = []
+    sleep_time = 10
+    while sleep_time > 0:
+        sign_span = getElement(browser, By.CLASS_NAME, "cs-sign-span", time=10, all=True)
         if sign_span and len(sign_span) == target_num:
             break
-        time.sleep(random.random())
+        time.sleep(1)
+        sleep_time -= 1
+
+    if len(sign_span) != target_num:
+        return
 
     cpc_img = browser.find_element(By.ID, "cpc_img")
     for sign in sign_span:
@@ -200,7 +205,7 @@ def cpc_img_info(browser):
 
         # 只要成功的数据
         try:
-            navimg = getElement(browser, By.CLASS_NAME, "nav-img")
+            navimg = getElement(browser, By.CLASS_NAME, "nav-img", time=1)
             if navimg:
                 with open(f"./images/{file_name}_info.json", "w+") as f:
                     f.write(json.dumps(img_info, indent=4, ensure_ascii=False))
@@ -236,13 +241,13 @@ def verification(browser):
             logger.error("滑块验证失败，开始图形识别....")
             cpc_img_info(browser)
 
-        navimg = getElement(browser, By.CLASS_NAME, "nav-img")
+        navimg = getElement(browser, By.CLASS_NAME, "nav-img", time=1)
         if navimg:
             return True
 
-        logger.info(f"验证失败，刷新一下")
-        jcap_refresh = getElement(browser, By.CLASS_NAME, "jcap_refresh")
-        jcap_refresh.click()
+        # logger.info(f"验证失败，刷新一下")
+        # jcap_refresh = getElement(browser, By.CLASS_NAME, "jcap_refresh")
+        # jcap_refresh.click()
         time.sleep(random.random())
 
 

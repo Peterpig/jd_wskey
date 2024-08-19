@@ -23,6 +23,7 @@ sequential_re = re.compile(r'依次选出"?(.*)"?')
 
 detModel = None
 ocrModel = None
+ocrModel2 = None
 
 
 def get_font():
@@ -203,7 +204,7 @@ def get_tips(tip_image_path):
         tip_type = 'shape'
 
     elif sequential_re.search(text):
-        text = sequential_re.search(text).group(1)
+        text = sequential_re.search(text).group(1)[:4]
         tip_type = 'sequential'
 
     else:
@@ -307,9 +308,13 @@ def get_text_by_tips(cpc_image_path, tips):
 
     global detModel
     global ocrModel
+    global ocrModel2
     if detModel is None:
         detModel = ddddocr.DdddOcr(det=True, show_ad=False)
         ocrModel  = ddddocr.DdddOcr(show_ad=False)
+        ocrModel2 = ddddocr.DdddOcr(show_ad=False, beta=True)
+        ocrModel.set_ranges(7)
+        ocrModel2.set_ranges(7)
 
 
     image = cv2.imread(cpc_image_path)
@@ -318,36 +323,50 @@ def get_text_by_tips(cpc_image_path, tips):
     bboxes = detModel.detection(image_bytes.tobytes())
 
 
+
     remaining_bboxes = []
+    cropped_image_bytes = None
     for index, bbox in enumerate(bboxes):
         x1, y1, x2, y2 = bbox
-        cropped_image = image[y1:y2, x1:x2]
-        _, cropped_image_bytes = cv2.imencode('.jpg', cropped_image)
+        buffer = 5
+        while buffer > 0:
+            try:
+                cropped_image = image[y1-buffer: y2+buffer, x1-buffer: x2+buffer]
+                _, cropped_image_bytes = cv2.imencode('.jpg', cropped_image)
+                break
+            except:
+                buffer -= 1
+
+
+        if not cropped_image_bytes:
+            return
+
         result = ocrModel.classification(cropped_image_bytes.tobytes())
+
+        if result not in split_tips:
+            result = ocrModel2.classification(cropped_image_bytes.tobytes())
 
         postion_info = {
             "x1": x1,
             "y1": y1,
             "x2": x2,
             "y2": y2,
-            "x": int((x1 + x2) / 2),
-            "y": int((y1 + y2) / 2),
+            "x": int((x1 + x2) / 2) + 5,
+            "y": int((y1 + y2) / 2) + 5,
             "index": index,
         }
+
         if result in split_tips:
             split_tips[result] = postion_info
         else:
             remaining_bboxes.append(postion_info)
 
-    pic_id = None
     if remaining_bboxes:
-        split_tips = {tip: None for tip in tips}
-        im = open(cpc_image_path, 'rb').read()
-        # for tip, value in split_tips.items():
-        #     if value is None:
-        #         split_tips[tip] = remaining_bboxes.pop(0)
+        for tip, value in split_tips.items():
+            if value is None:
+                split_tips[tip] = remaining_bboxes.pop(0)
 
-    return split_tips, pic_id
+    return split_tips
 
 if __name__ == "__main__":
 
