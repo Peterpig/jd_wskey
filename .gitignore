@@ -14,6 +14,7 @@ venv/
 auto_run.json
 logs/
 *.log
+*.swp
 bit_id_map.json
 geckodriver.log
 auto_set_jd_cookie*

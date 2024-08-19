@@ -18,7 +18,6 @@ from selenium.webdriver.support.wait import WebDriverWait
 
 from qinglong import init_ql
 from selenium_browser import get_browser
-from utils.chaojiying import chaojiying_client
 from utils.color_and_shape import get_text_by_tips, get_tips, get_X_Y
 from utils.slide import slide_match
 from utils.utils import get_cookies, get_logger, try_many_times
@@ -168,7 +167,6 @@ def cpc_img_info(browser):
         img = cpc_img.get_attribute("src")
 
         # 根据时间生成文件名
-
         cpc_image_path = save_image(img, f"{file_name}_cpc")
         save_image(tip_src, f"{file_name}_tip")
         tip_image_path = save_image(tip_screenshot_as_png, f"{file_name}_tip_screenshot")
@@ -197,20 +195,22 @@ def cpc_img_info(browser):
     if not tip:
         return
 
-    # targets = []
-    # pic_id = None
-    # if tip_type == 'sequential':
-    #     res, pic_id = get_text_by_tips(cpc_image_path, tip)
-    #     if not res:
-    #         return
-    #     try:
-    #         targets = [(postion['x'], postion['y']) for tip, postion in res.items()]
-    #     except Exception as e:
-    #         return False
-    # else:
-    #     res = get_X_Y(cpc_image_path, tip)
-    #     X, Y = res['X'], res['Y']
-    #     targets.append((X, Y))
+    targets = []
+    target_num = 1
+
+    if tip_type == 'sequential':
+        target_num = 4
+        # res, pic_id = get_text_by_tips(cpc_image_path, tip)
+        # if not res:
+        #    return
+        # try:
+        #     targets = [(postion['x'], postion['y']) for tip, postion in res.items()]
+        # except Exception as e:
+        #     return False
+    else:
+        res = get_X_Y(cpc_image_path, tip)
+        X, Y = res['X'], res['Y']
+        targets.append((X, Y))
 
     # # chrome窗口坐标 + 图片坐标 + 鼠标偏移
     # base_x, base_y = get_html_base_postion(browser)
@@ -229,70 +229,44 @@ def cpc_img_info(browser):
     #     pyautogui.click()
     #     time.sleep(random.random())
 
-    # try:
-
-    #     # 计算坐标
-    #     res = get_X_Y(cpc_image_path, tip_image_path)
-    #     X, Y = res['X'], res['Y']
-
-    #     if not (X and Y):
-    #         logger.error(f"未获到坐标：{res}")
-    #         return False
-
-    #     logger.info(f"计算到坐标 {X, Y}")
-
-    #     # chrome窗口坐标 + 图片坐标 + 鼠标偏移
-    #     base_x, base_y = get_html_base_postion(browser)
-
-    #     X_abs = base_x + int(cpc_img.rect['x']) + X
-    #     Y_abs = base_y + int(cpc_img.rect['y']) + Y
-
-    #     logger.info(f"获取到坐标 {X_abs, Y_abs} 移动鼠标 ！")
-    #     browser.switch_to.window(browser.current_window_handle)
-    #     pyautogui.moveTo(X_abs, Y_abs)
-    #     pyautogui.click()
-    #     time.sleep(random.random())
-    # except Exception as e:
-    #     logger.error(e)
-    #     return False
 
 
     # 获取人工打得标记
-    sign_span = getElement(browser, By.CLASS_NAME, "cs-sign-span", time=10, all=True)
-    if sign_span:
-        cpc_img = browser.find_element(By.ID, "cpc_img")
-        for sign in sign_span:
-            img_info["sign_span"].append(
-                {
-                    "rect": sign.rect,
-                    "position": {
-                        "top": sign.value_of_css_property("top"),
-                        "left": sign.value_of_css_property("left")
-                    }
+    sign_span = None
+    while True:
+        sign_span = getElement(browser, By.CLASS_NAME, "cs-sign-span", time=20, all=True)
+        if sign_span and len(sign_span) == target_num:
+            break
+        time.sleep(random.random())
+
+    cpc_img = browser.find_element(By.ID, "cpc_img")
+    for sign in sign_span:
+        img_info["sign_span"].append(
+            {
+                "rect": sign.rect,
+                "position": {
+                    "top": sign.value_of_css_property("top"),
+                    "left": sign.value_of_css_property("left")
                 }
-            )
+            }
+        )
 
-        save_image(cpc_img.screenshot_as_png, f"{file_name}_cpc_screenshot")
-        sure_btn = browser.find_element(By.CLASS_NAME, "captcha_footer").find_element(By.TAG_NAME, "button")
+    save_image(cpc_img.screenshot_as_png, f"{file_name}_cpc_screenshot")
+    sure_btn = browser.find_element(By.CLASS_NAME, "captcha_footer").find_element(By.TAG_NAME, "button")
 
-        if sure_btn:
-            logger.info("获取sign_span mark成功！登录中....")
-            sure_btn.click()
+    if sure_btn:
+        logger.info("获取sign_span mark成功！登录中....")
+        sure_btn.click()
 
-            # 只要成功的数据
-            try:
-                navimg = getElement(browser, By.CLASS_NAME, "nav-img")
-                if navimg:
-                    with open(f"./images/{file_name}_info.json", "w+") as f:
-                        f.write(json.dumps(img_info, indent=4, ensure_ascii=False))
-                    return True
-                elif pic_id:
-                    chaojiying_client.ReportError(pic_id)
-                    return False
-            except:
-                if pic_id:
-                    chaojiying_client.ReportError(pic_id)
-                return False
+        # 只要成功的数据
+        try:
+            navimg = getElement(browser, By.CLASS_NAME, "nav-img")
+            if navimg:
+                with open(f"./images/{file_name}_info.json", "w+") as f:
+                    f.write(json.dumps(img_info, indent=4, ensure_ascii=False))
+                return True
+        except:
+            return False
 
     return False
 

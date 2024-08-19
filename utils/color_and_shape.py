@@ -14,7 +14,6 @@ from scipy.spatial import distance as dist
 
 from utils.utils import get_logger
 
-from .chaojiying import chaojiying_client
 
 logger = get_logger(__file__.replace('.py', ''))
 
@@ -340,31 +339,13 @@ def get_text_by_tips(cpc_image_path, tips):
         else:
             remaining_bboxes.append(postion_info)
 
+    pic_id = None
     if remaining_bboxes:
         split_tips = {tip: None for tip in tips}
         im = open(cpc_image_path, 'rb').read()
-        res = chaojiying_client.PostPic(im, 9501)
-
         # for tip, value in split_tips.items():
         #     if value is None:
         #         split_tips[tip] = remaining_bboxes.pop(0)
-
-        if res and res['err_no'] == 0:
-            logger.info(f"调用超级鹰识别成功，错误码为: {res}")
-            try:
-                pic_id = res['pic_id']
-                pic_str = res['pic_str']
-                pic_list = pic_str.split("|")
-                pic_dict = { pic.split(",")[0]: (pic.split(",")[1:]) for pic in pic_list}
-                for key in split_tips:
-                    split_tips[key] = {
-                        "x": int(pic_dict[key][0]),
-                        "y": int(pic_dict[key][1]),
-                    }
-            except Exception as e:
-                logger.error(f"调用超级鹰识别失败，错误码为: {res}")
-                pic_id = res['pic_id']
-                chaojiying_client.ReportError(pic_id)
 
     return split_tips, pic_id
 
