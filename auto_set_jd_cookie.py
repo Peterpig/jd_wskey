@@ -16,7 +16,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from qinglong import init_ql
 from utils.selenium_browser import get_browser
 from utils.color_and_shape import get_text_by_tips, get_tips, get_X_Y
-from utils.slide import slide_match
+from utils.slide import slider_img
 from utils.utils import get_cookies, get_logger, try_many_times
 from utils.bitwarden import get_username_passwd_from_bit
 
@@ -34,15 +34,6 @@ bit_id_map.json
 """
 
 bit_id_map = json.load(open("./bit_id_map.json"))
-
-
-def indify_img(background_b64, target_b64):
-    background_bytes = base64.b64decode(
-        background_b64.replace("data:image/jpg;base64,", "")
-    )
-    target_bytes = base64.b64decode(target_b64.replace("data:image/png;base64,", ""))
-    res = slide_match(target_bytes, background_bytes, simple_target=True)
-    return res["target"]
 
 
 def getElement(driver, locateType, locatorExpression, time=5, all=False):
@@ -67,55 +58,6 @@ def send_keys_interval(element, text, interval=0.1):
     for c in text:
         element.send_keys(c)
         time.sleep(random.randint(int(interval * 500), int(interval * 1500)) / 1000)
-
-# 获取html元素左上角坐标
-def get_html_base_postion(browser):
-    position = browser.get_window_position()
-    panel_height = browser.execute_script(
-        "return window.outerHeight - window.innerHeight"
-    )
-    return position['x'], position['y'] + panel_height
-
-def slider_img(browser):
-    # 安全验证
-    background = browser.find_element(By.ID, "cpc_img")
-    target = browser.find_element(By.ID, "small_img")
-    silder_p = browser.find_element(By.CLASS_NAME, "sp_msg")
-    silder = silder_p.find_element(By.TAG_NAME, "img")
-
-    res = indify_img(
-        background_b64=background.get_attribute("src"),
-        target_b64=target.get_attribute("src"),
-    )
-    # 全屏
-    # distance = res[0] * 421 / 275
-
-    # cpc_img 图片属性如下
-    # Rendered size 展示的大小:	290 × 179 px
-    # Intrinsic size 原始大小:	275 × 170 px
-    # offset = res[0] * Rendered[0] / Intrinsic[0]
-    Rendered = background.get_attribute("offsetWidth")
-    Intrinsic = background.get_attribute("naturalWidth")
-
-    offset = res[0] * float(Rendered) / float(Intrinsic)
-    base_x, base_y = get_html_base_postion(browser)
-    rect = silder.rect
-
-    X, Y = (
-        base_x + rect["x"] + (rect["width"] / 2),
-        base_y + silder.location["y"] + (rect["height"] / 2),
-    )
-
-    x_ori, y_ori = pyautogui.position()
-    logger.info(f"移动至 {x_ori, y_ori}")
-    browser.switch_to.window(browser.current_window_handle)
-
-    pyautogui.moveTo(X, Y)
-    pyautogui.dragTo(
-        X + offset, Y, random.randint(2, 3), pyautogui.easeInOutBack, button="left"
-    )
-    pyautogui.moveTo(x_ori, y_ori)
-    return True
 
 
 def verify_code(browser):
