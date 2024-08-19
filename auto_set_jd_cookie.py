@@ -14,7 +14,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
 from qinglong import init_ql
-from selenium_browser import get_browser
+from utils.selenium_browser import get_browser
 from utils.color_and_shape import get_text_by_tips, get_tips, get_X_Y
 from utils.slide import slide_match
 from utils.utils import get_cookies, get_logger, try_many_times
