@@ -21,4 +21,4 @@ geckodriver.log
 auto_set_jd_cookie*
 run.sh
 drivers/**
-
+jd_pass.json
