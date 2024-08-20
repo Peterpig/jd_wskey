@@ -4,6 +4,7 @@
 *$py.class
 **/.DS_Store
 venv/
+.python-version
 
 # C extensions
 # *.so
@@ -20,3 +21,4 @@ geckodriver.log
 auto_set_jd_cookie*
 run.sh
 drivers/**
+
