@@ -340,8 +340,8 @@ def get_text_by_tips(cpc_image_path, tips):
             except:
                 buffer -= 1
 
-        if not result:
-            continue
+            if not result:
+                continue
 
 
         postion_info = {
