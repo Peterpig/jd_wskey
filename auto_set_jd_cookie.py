@@ -141,7 +141,7 @@ def cpc_img_info(browser):
     if tip_type == 'sequential':
         target_num = 4
         res = get_text_by_tips(cpc_image_path, tip)
-        print(f"res == {json.dumps(res, indent=2, ensure_ascii=False)}")
+        logger.info(f"res == {json.dumps(res, indent=2, ensure_ascii=False)}")
         if (not res) or (len(res) != target_num):
            return
         try:

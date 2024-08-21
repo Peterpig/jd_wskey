@@ -305,7 +305,7 @@ def get_X_Y(cpc_image_path, tip):
 
 def get_text_by_tips(cpc_image_path, tips):
     split_tips = [tip for tip in tips]
-    print(f"split_tips == {split_tips}")
+    logger.info(f"split_tips == {split_tips}")
 
     global detModel
     global ocrModel
