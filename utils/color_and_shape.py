@@ -328,6 +328,7 @@ def get_text_by_tips(cpc_image_path, tips):
         x1, y1, x2, y2 = bbox
         buffer = 5
         while buffer > 0:
+            result = None
             try:
                 cropped_image = image[y1-buffer: y2+buffer, x1-buffer: x2+buffer]
                 _, cropped_image_bytes = cv2.imencode('.jpg', cropped_image)
