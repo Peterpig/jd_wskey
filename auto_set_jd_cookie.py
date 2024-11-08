@@ -347,6 +347,10 @@ def set_qinglong_ck(qinglong, envlist, cookie, username):
     return f'{username}'
 
 
+@try_many_times(fail_exit=True)
+def send_bark(msg_str):
+    requests.get(f'https://bark.6tun.com/dvvFu9p3TvZHrHipusfUKi/京东Cookie设置成功/{msg_str}')
+
 
 async def main(*bit_users):
     qinglong = init_ql()
@@ -366,7 +370,8 @@ async def main(*bit_users):
         logger.info(f"暂未获取到过期账户!")
         return
 
-    msgs = []
+    success = []
+    fails = []
     logger.info(f"自动设置账户：{bit_users}")
     for bit_username in bit_users:
         bit_id = bit_id_map.get(bit_username)
@@ -381,16 +386,27 @@ async def main(*bit_users):
             continue
 
         logger.info(f"获取{bit_username}京东用户名密码成功， 开始获取cookie")
-        cookie = get_ck(jd_username, jd_passwd)
+        try:
+            cookie = get_ck(jd_username, jd_passwd)
 
-        msg = set_qinglong_ck(qinglong, envlist, cookie, bit_username)
-        if msg:
-            msgs.append(msg)
+            succ = set_qinglong_ck(qinglong, envlist, cookie, bit_username)
+            if succ:
+                success.append(succ)
+        except Exception as e:
+            fails.append(f'{bit_username} cookie设置失败！')
 
-    if msgs:
-        msg_str = '\n'.join(msgs)
+    msg_str = ''
+    if success:
+        msg_str = '\n'.join(success)
         msg_str += '\nCookie设置成功!'
-        requests.get(f'https://bark.6tun.com/dvvFu9p3TvZHrHipusfUKi/京东Cookie设置成功/{msg_str}')
+
+    if fails:
+        msg_str += '\n================\n'
+        msg_str = '\n'.join(fails)
+        msg_str += '\nCookie设置失败!'
+
+    if msg_str:
+        send_bark(msg_str)
 
 if __name__ == "__main__":
     fire.Fire(main)
