@@ -395,16 +395,16 @@ async def main(*bit_users):
             if succ:
                 success.append(succ)
         except Exception as e:
-            fails.append(f'{bit_username} cookie设置失败！')
+            fails.append(bit_username)
 
     msg_str = ''
     if success:
-        msg_str = '\n'.join(success)
+        msg_str += '\n'.join(success)
         msg_str += '\nCookie设置成功!'
 
     if fails:
         msg_str += '\n================\n'
-        msg_str = '\n'.join(fails)
+        msg_str += '\n'.join(fails)
         msg_str += '\nCookie设置失败!'
 
     if msg_str:
