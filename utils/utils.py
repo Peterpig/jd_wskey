@@ -12,7 +12,7 @@ import colorlog
 import socks
 from telethon.sync import TelegramClient
 
-TRY_TIMES = 10
+TRY_TIMES = 3
 
 
 def try_many_times(fail_exit=False, times=TRY_TIMES):

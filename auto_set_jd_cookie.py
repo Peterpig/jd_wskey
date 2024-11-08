@@ -247,7 +247,9 @@ def verification(browser):
 
         logger.info(f"验证失败，刷新一下")
         jcap_refresh = getElement(browser, By.CLASS_NAME, "jcap_refresh")
-        jcap_refresh.click()
+        if jcap_refresh:
+            jcap_refresh.click()
+
         time.sleep(random.random())
 
 
