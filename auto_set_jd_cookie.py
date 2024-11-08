@@ -259,7 +259,7 @@ def get_ck(jd_username, jd_passwd):
     # browser.maximize_window()
     wait = WebDriverWait(browser, timeout=20)
 
-    for n in range(50):
+    for n in range(8):
         browser.get("https://plogin.m.jd.com/login/login")
         logger.info("请在网页端通过手机号码登录")
 
