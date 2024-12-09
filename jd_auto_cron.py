@@ -43,6 +43,9 @@ async def main():
         if "jd_bean_change_huizong" in command:
             has_huizong = True
 
+        if "BiliBiliToolPro" in command:
+            continue
+
         schedule_list = re.sub(r' {2,}', ' ', schedule).split(' ')
 
         if len(schedule_list) not in (5, 6):
