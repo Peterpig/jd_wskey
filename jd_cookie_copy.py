@@ -53,5 +53,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-    import os
-    os.system('curl 127.0.0.1:5700')
