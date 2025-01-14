@@ -258,66 +258,71 @@ def verification(browser):
 @try_many_times(fail_exit=True)
 def get_ck(jd_username, jd_passwd):
     browser = get_browser()
-    # browser.maximize_window()
-    wait = WebDriverWait(browser, timeout=20)
 
-    for n in range(8):
-        browser.get("https://plogin.m.jd.com/login/login")
-        logger.info("请在网页端通过手机号码登录")
+    try:
+        # browser.maximize_window()
+        wait = WebDriverWait(browser, timeout=20)
 
-        wait.until(EC.presence_of_element_located((By.ID, "username")))
-        wait.until(EC.presence_of_element_located((By.ID, "pwd")))
-        wait.until(EC.presence_of_element_located((By.CLASS_NAME, "planBLogin")))
-        wait.until(EC.presence_of_element_located((By.TAG_NAME, "a")))
+        for n in range(8):
+            browser.get("https://plogin.m.jd.com/login/login")
+            logger.info("请在网页端通过手机号码登录")
 
-        planBLogin = browser.find_element(By.CLASS_NAME, "planBLogin")
-        planBLogin.click()
+            wait.until(EC.presence_of_element_located((By.ID, "username")))
+            wait.until(EC.presence_of_element_located((By.ID, "pwd")))
+            wait.until(EC.presence_of_element_located((By.CLASS_NAME, "planBLogin")))
+            wait.until(EC.presence_of_element_located((By.TAG_NAME, "a")))
 
-        username = browser.find_element(By.ID, "username")
-        password = browser.find_element(By.ID, "pwd")
-        policy = browser.find_element(By.CLASS_NAME, "policy_tip-checkbox")
-        login = browser.find_element(By.TAG_NAME, "a")
+            planBLogin = browser.find_element(By.CLASS_NAME, "planBLogin")
+            planBLogin.click()
 
-        send_keys_interval(username, jd_username)
-        send_keys_interval(password, jd_passwd)
-        policy.click()
+            username = browser.find_element(By.ID, "username")
+            password = browser.find_element(By.ID, "pwd")
+            policy = browser.find_element(By.CLASS_NAME, "policy_tip-checkbox")
+            login = browser.find_element(By.TAG_NAME, "a")
 
-        # import pdb;pdb.set_trace()
-        # wait.until(EC.presence_of_element_located((By.CLASS_NAME, "btn-active")))
-        locator = (By.CSS_SELECTOR, ".btn.J_ping.active")
-        wait.until(EC.presence_of_element_located(locator))
-        login.click()
-        time.sleep(random.random())
+            send_keys_interval(username, jd_username)
+            send_keys_interval(password, jd_passwd)
+            policy.click()
 
-        success = verification(browser)
-        if not success:
-            continue
+            # import pdb;pdb.set_trace()
+            # wait.until(EC.presence_of_element_located((By.CLASS_NAME, "btn-active")))
+            locator = (By.CSS_SELECTOR, ".btn.J_ping.active")
+            wait.until(EC.presence_of_element_located(locator))
+            login.click()
+            time.sleep(random.random())
 
-        # wait.until(EC.presence_of_element_located((By.ID, "msShortcutMenu")))
-        # browser.get("https://home.m.jd.com/myJd/newhome.action")
-        # username2 = getElement(browser, By.CLASS_NAME, "my_header_name").text
+            success = verification(browser)
+            if not success:
+                continue
 
-        pt_key, pt_pin, cookie = "", "", ""
-        for _ in browser.get_cookies():
-            if _["name"] == "pt_key":
-                pt_key = _["value"]
-            elif _["name"] == "pt_pin":
-                pt_pin = _["value"]
+            # wait.until(EC.presence_of_element_located((By.ID, "msShortcutMenu")))
+            # browser.get("https://home.m.jd.com/myJd/newhome.action")
+            # username2 = getElement(browser, By.CLASS_NAME, "my_header_name").text
+
+            pt_key, pt_pin, cookie = "", "", ""
+            for _ in browser.get_cookies():
+                if _["name"] == "pt_key":
+                    pt_key = _["value"]
+                elif _["name"] == "pt_pin":
+                    pt_pin = _["value"]
+
+                if pt_key and pt_pin:
+                    break
 
             if pt_key and pt_pin:
                 break
 
-        if pt_key and pt_pin:
-            break
-
-    cookie = {
-        "pt_key": pt_key,
-        "pt_pin": pt_pin,
-        "__time": time.time(),
-    }
-    logger.info(f"获取到cookie是：{cookie}")
-    browser.quit()
-    return cookie
+        cookie = {
+            "pt_key": pt_key,
+            "pt_pin": pt_pin,
+            "__time": time.time(),
+        }
+        logger.info(f"获取到cookie是：{cookie}")
+        return cookie
+    except Exception as e:
+        raise e
+    finally:
+        browser.quit()
 
 
 def serch_ck(pin, envlist):
