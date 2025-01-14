@@ -22,8 +22,8 @@ async def main():
     cookies = await get_cookies(ql)
 
     host = 'http://127.0.0.1:5700'
-    client_id = 'G-ONtb0t-4YJ'
-    client_secret = 'XIs1-HY5DZAjBc0mtpfpwT6D'
+    client_id = os.environ.get("local_client_id")
+    client_secret = os.environ.get("local_client_secret")
 
     json_config = {"host": host, "client_id": client_id, "client_secret": client_secret}
 
