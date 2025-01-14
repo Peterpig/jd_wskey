@@ -24,6 +24,8 @@ ENV_KEEP_KEYS = {"id", "value", "name", "remarks"}
 
 logger = get_logger(__file__.replace('.py', ''))
 
+# pyautogui.FAILSAFE = False
+
 
 """
 bit_id_map.json
@@ -278,9 +280,12 @@ def get_ck(jd_username, jd_passwd):
 
         send_keys_interval(username, jd_username)
         send_keys_interval(password, jd_passwd)
-
         policy.click()
-        wait.until(EC.presence_of_element_located((By.CLASS_NAME, "btn-active")))
+
+        # import pdb;pdb.set_trace()
+        # wait.until(EC.presence_of_element_located((By.CLASS_NAME, "btn-active")))
+        locator = (By.CSS_SELECTOR, ".btn.J_ping.active")
+        wait.until(EC.presence_of_element_located(locator))
         login.click()
         time.sleep(random.random())
 
@@ -409,6 +414,7 @@ async def main(*bit_users):
 
     if msg_str:
         send_bark(msg_str)
+    logger.info(f"Cookie设置完成, {msg_str}")
 
 if __name__ == "__main__":
     fire.Fire(main)

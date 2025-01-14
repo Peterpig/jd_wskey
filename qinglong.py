@@ -9,7 +9,7 @@ from retry import retry
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
-TRY_TIMES = 10
+TRY_TIMES = 20
 
 
 class Qinglong:
@@ -54,7 +54,7 @@ class Qinglong:
         except KeyError:
             raise KeyError(f"获取token失败")
 
-    @retry(tries=TRY_TIMES, delay=2)
+    @retry(tries=TRY_TIMES, delay=2, backoff=2)
     def request_method(self, method, url, params=None, data=None):
         try:
             kwargs = {"timeout": 30, "headers": self.header}
