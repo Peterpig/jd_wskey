@@ -195,7 +195,7 @@ async def main():
         logger.info(me)
 
         client.add_event_handler(
-            handler, events.NewMessage(pattern=r".*\n*export \w+=\"[^\"]+\"")
+            handler, events.NewMessage(pattern=r".*\n*export \w+=\"[^\"]+\"(\n*.)*")
         )
 
         await client.run_until_disconnected()
