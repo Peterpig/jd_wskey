@@ -14,7 +14,6 @@ from scipy.spatial import distance as dist
 
 from utils.utils import get_logger
 
-
 logger = get_logger(__file__.replace('.py', ''))
 
 color_re = re.compile(r"请选出图中(.*?色)的图形")
@@ -326,24 +325,27 @@ def get_text_by_tips(cpc_image_path, tips):
     ret = []
     for index, bbox in enumerate(bboxes):
         x1, y1, x2, y2 = bbox
-        buffer = 5
+        buffer = 10
         while buffer > 0:
             result = None
             try:
                 cropped_image = image[y1-buffer: y2+buffer, x1-buffer: x2+buffer]
                 _, cropped_image_bytes = cv2.imencode('.jpg', cropped_image)
-                result = ocrModel.classification(cropped_image_bytes.tobytes())
+                cbytes = cropped_image_bytes.tobytes()
+                result1 = ocrModel.classification(cbytes)
+                result2 = ocrModel2.classification(cbytes)
 
-                if (not result) or (result not in split_tips):
-                    result = ocrModel2.classification(cropped_image_bytes.tobytes())
+                if result1 in split_tips:
+                    result = result1
+                    break
 
-                break
+                if result2 in split_tips:
+                    result = result2
+                    break
             except:
+                ...
+            finally:
                 buffer -= 1
-
-            if not result:
-                continue
-
 
         postion_info = {
             "x1": x1,
