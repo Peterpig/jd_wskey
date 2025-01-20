@@ -42,6 +42,7 @@ async def get_cookies(qinglong):
 def get_tg_client(proxy_ip='127.0.0.1', proxy_port=7890, session_name="tg", logger=None):
     api_id = os.environ.get("tg_api_id")
     api_hash = os.environ.get("tg_api_hash")
+    from telethon.sync import TelegramClient
 
     from telethon.sync import TelegramClient
 

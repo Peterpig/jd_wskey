@@ -47,7 +47,7 @@ async def main():
             for cookie in cookies
         ]
     )
-    send("京东cookie-Copy成功", msg)
+    # send("京东cookie-Copy成功", msg)
 
 
 
