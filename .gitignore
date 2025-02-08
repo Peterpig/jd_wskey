@@ -5,6 +5,9 @@
 **/.DS_Store
 venv/
 .python-version
+dist/
+build/
+icons/
 
 # C extensions
 # *.so
@@ -22,3 +25,4 @@ auto_set_jd_cookie*
 run.sh
 drivers/**
 jd_pass.json
+tg.session

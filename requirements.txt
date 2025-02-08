@@ -1,6 +1,9 @@
-requests
-fake-useragent==1.0.1
+PyQt6==6.6.1
+PyQt6-WebEngine==6.6.0
+pyinstaller==6.3.0
+requests==2.31.0
 retry==0.9.2
+fake-useragent==1.0.1
 dotmap
 Telethon==1.28.5
 fire==0.5.0
