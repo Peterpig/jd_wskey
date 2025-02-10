@@ -1,13 +1,14 @@
 import json
 import logging
 import os
+import platform
 import re
 import sys
 import traceback
 from datetime import datetime
 
 from PyQt6.QtCore import Qt, QThread, QTimer, QUrl, pyqtSignal
-from PyQt6.QtGui import QClipboard, QColor
+from PyQt6.QtGui import QClipboard, QColor, QIcon
 from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import (
@@ -35,25 +36,51 @@ from qinglong import Qinglong
 
 def setup_logging():
     """设置日志"""
-    # 获取用户家目录下的日志目录
-    log_dir = os.path.expanduser("~/Library/Logs/JD账户管理器")
-    os.makedirs(log_dir, exist_ok=True)
+    try:
+        # 获取用户家目录下的日志目录
+        log_dir = os.path.expanduser("~/Library/Logs/JD账户管理器")
+        os.makedirs(log_dir, exist_ok=True)
 
-    # 设置日志文件名（包含时间戳）
-    log_file = os.path.join(
-        log_dir, f"debug_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-    )
+        # 设置日志文件名（使用当前时间）
+        current_time = datetime.now()
+        log_file = os.path.join(
+            log_dir, f"debug_{current_time.strftime('%Y%m%d_%H%M%S')}.log"
+        )
 
-    # 配置日志
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.FileHandler(log_file, encoding="utf-8"),
-            logging.StreamHandler(),
-        ],
-    )
-    return log_file
+        # 确保日志文件可写
+        try:
+            with open(log_file, "a", encoding="utf-8") as f:
+                f.write("=== 日志文件初始化 ===\n")
+        except Exception as e:
+            print(f"无法写入日志文件: {str(e)}")
+            return None
+
+        # 配置日志
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s - %(levelname)s - %(message)s",
+            handlers=[
+                logging.FileHandler(log_file, encoding="utf-8", mode="a"),
+                logging.StreamHandler(),
+            ],
+        )
+
+        # 创建logger实例
+        logger = logging.getLogger("JDManager")
+        logger.setLevel(logging.DEBUG)
+
+        # 添加启动信息
+        logger.info("=== 应用程序启动 ===")
+        logger.info(f"日志文件: {log_file}")
+        logger.info(f"Python版本: {sys.version}")
+        logger.info(f"操作系统: {platform.platform()}")
+        logger.info(f"工作目录: {os.getcwd()}")
+
+        return log_file
+
+    except Exception as e:
+        print(f"设置日志失败: {str(e)}")
+        return None
 
 
 class OrderWindow(QMainWindow):
@@ -390,7 +417,7 @@ class SettingsWindow(QMainWindow):
 class AccountListWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("JD账户管理")
+        self.setWindowTitle("JD账户管理器")
         self.setGeometry(100, 100, 600, 600)
 
         # 创建主窗口部件和布局
@@ -1107,10 +1134,23 @@ def main():
     try:
         # 设置日志
         log_file = setup_logging()
-        logging.info("应用程序启动")
+        logger = logging.getLogger("JDManager")
+
+        if not log_file:
+            print("警告: 日志系统初始化失败")
+
+        logger.info("应用程序启动")
 
         app = QApplication(sys.argv)
         app.setApplicationName("JD Account Manager")
+
+        # 设置应用图标
+        icon_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "utils", "jd.png"
+        )
+        if os.path.exists(icon_path):
+            app.setWindowIcon(QIcon(icon_path))
+            logger.info(f"已设置应用图标: {icon_path}")
 
         # 捕获未处理的异常
         sys.excepthook = handle_exception
@@ -1118,12 +1158,15 @@ def main():
         window = AccountListWindow()
         window.show()
 
-        logging.info(f"日志文件位置: {log_file}")
+        if log_file:
+            logger.info(f"日志文件位置: {log_file}")
+
         sys.exit(app.exec())
 
     except Exception as e:
-        logging.error(f"程序启动失败: {str(e)}")
-        logging.error(traceback.format_exc())
+        if log_file:
+            logger.error(f"程序启动失败: {str(e)}")
+            logger.error(traceback.format_exc())
         raise
 
 

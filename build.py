@@ -10,7 +10,6 @@ system = platform.system().lower()
 # 基础配置
 app_name = "JD账户管理器"
 main_script = "QT_jd.py"
-icon_file = os.path.join("icons", "icon.ico" if system == "windows" else "icon.icns")
 
 # 公共参数
 common_options = [
@@ -19,58 +18,93 @@ common_options = [
     "--clean",
     "--name",
     app_name,
+    # 必要的导入
     "--hidden-import",
     "PyQt6.QtWebEngineCore",
     "--hidden-import",
     "PyQt6.QtWebEngineWidgets",
-    "--collect-data",
-    "PyQt6.QtWebEngineCore",
+    "--hidden-import",
+    "PyQt6.QtNetwork",
+    "--hidden-import",
+    "PyQt6.QtPrintSupport",
+    "--hidden-import",
+    "PyQt6.QtQml",
+    "--hidden-import",
+    "PyQt6.QtQuick",
+    "--hidden-import",
+    "PyQt6.QtQuickWidgets",
+    "--hidden-import",
+    "PyQt6.QtPositioning",
+    # 收集所有Qt相关数据
+    "--collect-all",
+    "PyQt6",
+    # 数据文件
     "--add-data",
     f"qinglong.py{os.pathsep}.",
+    # 添加图标文件
+    "--add-data",
+    f"utils{os.pathsep}.",  # 确保图标文件被打包
 ]
-
-# 如果图标文件存在，添加图标选项
-if os.path.exists(icon_file):
-    common_options.extend(["--icon", icon_file])
 
 # macOS特定配置
 if system == "darwin":
-    # 获取PyQt6安装路径
     import PyQt6
+
     qt_path = os.path.dirname(PyQt6.__file__)
+    qt_framework_path = os.path.join(qt_path, "Qt6")
 
-    # 添加必要的框架和资源
-    common_options.extend([
-        '--hidden-import', 'PyQt6.QtWebEngineCore',
-        '--hidden-import', 'PyQt6.QtWebEngineWidgets',
-        '--hidden-import', 'PyQt6.QtNetwork',
-        '--collect-data', 'PyQt6.QtWebEngineCore',
-        '--collect-all', 'PyQt6.QtWebEngineCore',
-    ])
+    # WebEngine进程
+    webengine_process = os.path.join(
+        qt_framework_path,
+        "QtWebEngineCore.framework",
+        "Helpers",
+        "QtWebEngineProcess.app",
+        "Contents",
+        "MacOS",
+        "QtWebEngineProcess",
+    )
 
-    # 添加WebEngine进程
-    webengine_process = os.path.join(qt_path, 'Qt6', 'lib', 'QtWebEngineCore')
     if os.path.exists(webengine_process):
-        common_options.extend(['--add-binary', f'{webengine_process}:PyQt6/Qt6/lib/QtWebEngineCore'])
+        target_path = os.path.join(
+            "PyQt6",
+            "Qt6",
+            "lib",
+            "QtWebEngineCore.framework",
+            "Helpers",
+            "QtWebEngineProcess.app",
+            "Contents",
+            "MacOS",
+        )
+        common_options.extend(["--add-binary", f"{webengine_process}:{target_path}"])
 
-# 根据操作系统添加特定选项
+    # Resources
+    resources_path = os.path.join(
+        qt_framework_path, "QtWebEngineCore.framework", "Resources"
+    )
+    if os.path.exists(resources_path):
+        target_resources = os.path.join(
+            "PyQt6", "Qt6", "lib", "QtWebEngineCore.framework", "Resources"
+        )
+        common_options.extend(["--add-data", f"{resources_path}:{target_resources}"])
+
+# 系统特定选项
 if system == "windows":
     options = [
         *common_options,
-        "--windowed",  # Windows下不显示控制台
+        "--windowed",
         "--add-binary",
         f'{os.path.join(sys._MEIPASS if getattr(sys, "frozen", False) else os.path.dirname(os.path.abspath(__file__)), "venv/Lib/site-packages/PyQt6/Qt6/bin/QtWebEngineProcess.exe")};PyQt6/Qt6/bin',
     ]
-elif system == "darwin":  # macOS
+elif system == "darwin":
     options = [
         *common_options,
         "--windowed",
         "--codesign-identity",
-        "-",  # 使用临时签名
+        "-",
         "--osx-bundle-identifier",
         "com.jd.account.manager",
     ]
-else:  # Linux
+else:
     options = [
         *common_options,
         "--onefile",
