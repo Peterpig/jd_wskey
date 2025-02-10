@@ -9,6 +9,7 @@ from datetime import datetime
 
 from PyQt6.QtCore import Qt, QThread, QTimer, QUrl, pyqtSignal
 from PyQt6.QtGui import QIcon
+from PyQt6.QtNetwork import QNetworkCookie
 from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import (
@@ -171,7 +172,6 @@ class OrderWindow(QMainWindow):
 
     def create_cookie(self, name, value):
         try:
-            from PyQt6.QtNetwork import QNetworkCookie
 
             logging.info(f"创建Cookie: {name}")
             cookie = QNetworkCookie(name.encode(), value.encode())
@@ -436,6 +436,12 @@ class SettingsWindow(QMainWindow):
             self.save_btn.setEnabled(True)
             self.save_btn.setText("保存设置")
 
+    def closeEvent(self, event):
+        """重写关闭事件，在窗口关闭时通知父窗口"""
+        if isinstance(self.parent, AccountListWindow):
+            self.parent.check_qinglong_config()
+        super().closeEvent(event)
+
 
 class AccountListWindow(QMainWindow):
     def __init__(self):
@@ -453,35 +459,10 @@ class AccountListWindow(QMainWindow):
         # 修改顶部按钮布局
         top_layout = QHBoxLayout()
 
-        # 添加同步按钮
-        sync_btn = QPushButton("🔄 同步账号")
-        sync_btn.setFixedWidth(120)
-        sync_btn.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #52c41a;  /* 使用绿色以区分 */
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 8px;
-                font-size: 13px;
-            }
-            QPushButton:hover {
-                background-color: #73d13d;
-            }
-            QPushButton:disabled {
-                background-color: #b7eb8f;
-                color: rgba(255, 255, 255, 0.8);
-            }
-        """
-        )
-        sync_btn.clicked.connect(self.manual_sync_from_qinglong)
-        top_layout.addWidget(sync_btn)
-
-        # 添加青龙设置按钮
-        settings_btn = QPushButton("⚙️ 青龙设置")
-        settings_btn.setFixedWidth(120)
-        settings_btn.setStyleSheet(
+        # 创建青龙菜单按钮
+        self.ql_btn = QPushButton("🔮 青龙面板")
+        self.ql_btn.setFixedWidth(120)
+        self.ql_btn.setStyleSheet(
             """
             QPushButton {
                 background-color: #1890ff;
@@ -494,13 +475,54 @@ class AccountListWindow(QMainWindow):
             QPushButton:hover {
                 background-color: #40a9ff;
             }
-        """
+            QPushButton:disabled {
+                background-color: #bae7ff;
+                color: rgba(255, 255, 255, 0.8);
+            }
+            """
         )
-        settings_btn.clicked.connect(self.show_settings)
 
-        # 使用弹簧来分隔按钮
-        top_layout.addStretch()
-        top_layout.addWidget(settings_btn)
+        # 创建下拉菜单
+        self.ql_menu = QMenu(self)
+        self.ql_menu.setStyleSheet(
+            """
+            QMenu {
+                background-color: white;
+                border: 1px solid #e8e8e8;
+                border-radius: 4px;
+                padding: 4px 0;
+            }
+            QMenu::item {
+                padding: 8px 20px;
+                border-radius: 4px;
+                margin: 2px 4px;
+            }
+            QMenu::item:selected {
+                background-color: #e6f7ff;
+                color: #1890ff;
+            }
+            QMenu::separator {
+                height: 1px;
+                background-color: #f0f0f0;
+                margin: 4px 0;
+            }
+            """
+        )
+
+        # 添加菜单项
+        self.settings_action = self.ql_menu.addAction("⚙️ 面板设置")
+        self.sync_action = self.ql_menu.addAction("🔄 同步账号")
+
+        # 设置按钮点击事件
+        self.ql_btn.clicked.connect(self.show_ql_menu)
+        self.settings_action.triggered.connect(self.show_settings)
+        self.sync_action.triggered.connect(
+            lambda: self.sync_from_qinglong(is_auto=False)
+        )
+
+        # 添加按钮到布局
+        top_layout.addStretch()  # 添加弹簧将按钮推到右边
+        top_layout.addWidget(self.ql_btn)
 
         main_layout.addLayout(top_layout)
 
@@ -602,8 +624,9 @@ class AccountListWindow(QMainWindow):
         """
         )
 
-        # 在初始化完成后，尝试自动同步
-        QTimer.singleShot(500, self.auto_sync_from_qinglong)
+        # 初始检查青龙配置并自动同步
+        QTimer.singleShot(0, self.check_qinglong_config)
+        QTimer.singleShot(500, lambda: self.sync_from_qinglong(is_auto=True))
 
     def parse_account_data(self, text):
         # 分割多行文本
@@ -694,7 +717,36 @@ class AccountListWindow(QMainWindow):
         elif action == backup_action:
             self.backup_account(account_item)
 
+    def show_ql_menu(self):
+        """显示青龙菜单"""
+        # 在按钮下方显示菜单
+        pos = self.ql_btn.mapToGlobal(self.ql_btn.rect().bottomLeft())
+        self.ql_menu.popup(pos)
+
+    def check_qinglong_config(self):
+        """检查青龙配置状态并更新同步按钮状态"""
+        try:
+            config_path = get_config_path()
+            has_config = os.path.exists(config_path)
+            if has_config:
+                with open(config_path, "r") as f:
+                    config = json.load(f)
+                    has_config = all(config.values())  # 确保所有配置项都有值
+
+            # 更新同步按钮状态
+            self.sync_action.setEnabled(has_config)
+            if not has_config:
+                self.sync_action.setText("🔄 同步账号 (请先配置青龙面板)")
+            else:
+                self.sync_action.setText("🔄 同步账号")
+
+        except Exception as e:
+            self.sync_action.setEnabled(False)
+            self.sync_action.setText("🔄 同步账号 (配置检查失败)")
+            logging.error(f"检查青龙配置失败: {str(e)}")
+
     def show_settings(self):
+        """显示设置窗口"""
         self.settings_window = SettingsWindow(self)
         self.settings_window.show()
 
@@ -972,7 +1024,7 @@ class AccountListWindow(QMainWindow):
 
     def show_import_results(self, success_count, update_count, failed_count):
         """显示导入结果"""
-        self.loading_label.clear()  # 清除加载指示
+        self.loading_label.clear()
 
         result_message = []
         if success_count > 0:
@@ -987,47 +1039,13 @@ class AccountListWindow(QMainWindow):
         else:
             final_message = "没有需要同步的账号"
 
-        # 在状态栏显示结果，3秒后自动消失
         self.statusBar.showMessage(final_message, 3000)
 
-    def auto_sync_from_qinglong(self):
-        """自动从青龙同步数据"""
-        try:
-            # 检查配置文件是否存在
-            config_path = get_config_path()
-            if not os.path.exists(config_path):
-                self.statusBar.showMessage("未检测到青龙配置，请先完成青龙设置", 5000)
-                return
-
-            with open(config_path, "r") as f:
-                config = json.load(f)
-
-            # 显示同步开始状态
-            self.loading_label.setText("🔄 正在同步青龙面板数据...")
-            self.statusBar.showMessage("正在连接青龙面板...", 0)  # 0表示不自动消失
-
-            # 创建并启动导入线程
-            self.import_thread = QinglongOperationThread("import", config)
-            self.import_thread.env_result.connect(self.process_imported_envs)
-            self.import_thread.error.connect(self.on_auto_sync_error)
-            self.import_thread.finished.connect(self.on_auto_sync_finished)
-            self.import_thread.start()
-
-        except Exception as e:
-            self.statusBar.showMessage(f"自动同步失败：{str(e)}", 5000)
-            self.loading_label.clear()
-
-    def on_auto_sync_error(self, error):
-        """自动同步错误处理"""
-        self.statusBar.showMessage(f"自动同步失败：{error}", 5000)
-        self.loading_label.clear()
-
-    def on_auto_sync_finished(self):
-        """自动同步完成处理"""
-        self.loading_label.clear()
-
-    def manual_sync_from_qinglong(self):
-        """手动从青龙同步数据"""
+    def sync_from_qinglong(self, is_auto=True):
+        """从青龙同步数据
+        Args:
+            is_auto (bool): 是否为自动同步
+        """
         try:
             # 检查配置文件是否存在
             config_path = get_config_path()
@@ -1045,17 +1063,21 @@ class AccountListWindow(QMainWindow):
             # 创建并启动导入线程
             self.import_thread = QinglongOperationThread("import", config)
             self.import_thread.env_result.connect(self.process_imported_envs)
-            self.import_thread.error.connect(self.on_sync_error)
+            self.import_thread.error.connect(
+                lambda error: self.on_sync_error(error, is_auto)
+            )
             self.import_thread.finished.connect(self.on_sync_finished)
             self.import_thread.start()
 
         except Exception as e:
-            self.statusBar.showMessage(f"同步失败：{str(e)}", 5000)
+            error_prefix = "自动同步" if is_auto else "同步"
+            self.statusBar.showMessage(f"{error_prefix}失败：{str(e)}", 5000)
             self.loading_label.clear()
 
-    def on_sync_error(self, error):
+    def on_sync_error(self, error, is_auto=True):
         """同步错误处理"""
-        self.statusBar.showMessage(f"同步失败：{error}", 5000)
+        error_prefix = "自动同步" if is_auto else "同步"
+        self.statusBar.showMessage(f"{error_prefix}失败：{error}", 5000)
         self.loading_label.clear()
 
     def on_sync_finished(self):
@@ -1180,8 +1202,6 @@ class AssetWindow(QMainWindow):
         self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)
 
     def create_cookie(self, name, value):
-        from PyQt6.QtNetwork import QNetworkCookie
-
         cookie = QNetworkCookie(name.encode(), value.encode())
         cookie.setDomain(".jd.com")
         cookie.setPath("/")
