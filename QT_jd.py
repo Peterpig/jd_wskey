@@ -450,8 +450,33 @@ class AccountListWindow(QMainWindow):
         main_layout.setSpacing(10)
         main_layout.setContentsMargins(15, 15, 15, 15)
 
-        # 添加顶部按钮布局
+        # 修改顶部按钮布局
         top_layout = QHBoxLayout()
+
+        # 添加同步按钮
+        sync_btn = QPushButton("🔄 同步账号")
+        sync_btn.setFixedWidth(120)
+        sync_btn.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #52c41a;  /* 使用绿色以区分 */
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 8px;
+                font-size: 13px;
+            }
+            QPushButton:hover {
+                background-color: #73d13d;
+            }
+            QPushButton:disabled {
+                background-color: #b7eb8f;
+                color: rgba(255, 255, 255, 0.8);
+            }
+        """
+        )
+        sync_btn.clicked.connect(self.manual_sync_from_qinglong)
+        top_layout.addWidget(sync_btn)
 
         # 添加青龙设置按钮
         settings_btn = QPushButton("⚙️ 青龙设置")
@@ -472,7 +497,10 @@ class AccountListWindow(QMainWindow):
         """
         )
         settings_btn.clicked.connect(self.show_settings)
-        top_layout.addWidget(settings_btn, alignment=Qt.AlignmentFlag.AlignRight)
+
+        # 使用弹簧来分隔按钮
+        top_layout.addStretch()
+        top_layout.addWidget(settings_btn)
 
         main_layout.addLayout(top_layout)
 
@@ -996,6 +1024,42 @@ class AccountListWindow(QMainWindow):
 
     def on_auto_sync_finished(self):
         """自动同步完成处理"""
+        self.loading_label.clear()
+
+    def manual_sync_from_qinglong(self):
+        """手动从青龙同步数据"""
+        try:
+            # 检查配置文件是否存在
+            config_path = get_config_path()
+            if not os.path.exists(config_path):
+                self.statusBar.showMessage("未检测到青龙配置，请先完成青龙设置", 5000)
+                return
+
+            with open(config_path, "r") as f:
+                config = json.load(f)
+
+            # 显示同步开始状态
+            self.loading_label.setText("🔄 正在同步青龙面板数据...")
+            self.statusBar.showMessage("正在连接青龙面板...", 0)
+
+            # 创建并启动导入线程
+            self.import_thread = QinglongOperationThread("import", config)
+            self.import_thread.env_result.connect(self.process_imported_envs)
+            self.import_thread.error.connect(self.on_sync_error)
+            self.import_thread.finished.connect(self.on_sync_finished)
+            self.import_thread.start()
+
+        except Exception as e:
+            self.statusBar.showMessage(f"同步失败：{str(e)}", 5000)
+            self.loading_label.clear()
+
+    def on_sync_error(self, error):
+        """同步错误处理"""
+        self.statusBar.showMessage(f"同步失败：{error}", 5000)
+        self.loading_label.clear()
+
+    def on_sync_finished(self):
+        """同步完成处理"""
         self.loading_label.clear()
 
 
