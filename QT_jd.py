@@ -8,18 +8,15 @@ import traceback
 from datetime import datetime
 
 from PyQt6.QtCore import Qt, QThread, QTimer, QUrl, pyqtSignal
-from PyQt6.QtGui import QClipboard, QColor, QIcon
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import (
     QApplication,
-    QFrame,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
-    QListWidget,
-    QListWidgetItem,
     QMainWindow,
     QMenu,
     QMessageBox,
@@ -351,7 +348,14 @@ class SettingsWindow(QMainWindow):
         self.test_thread.start()
 
     def on_test_success(self):
-        QMessageBox.information(self, "成功", "连接测试成功！")
+        # 在状态栏显示成功消息
+        if isinstance(self.parent, AccountListWindow):
+            self.parent.statusBar.showMessage("✅ 连接测试成功", 3000)
+        else:
+            # 如果没有父窗口的状态栏，则显示在当前窗口标题
+            self.setWindowTitle("青龙面板设置 - 连接成功")
+            # 3秒后恢复原标题
+            QTimer.singleShot(3000, lambda: self.setWindowTitle("青龙面板设置"))
 
     def on_test_error(self, error_msg):
         QMessageBox.critical(self, "错误", f"连接青龙面板失败：{error_msg}")
@@ -385,33 +389,33 @@ class SettingsWindow(QMainWindow):
             QMessageBox.warning(self, "错误", "请填写所有必要信息！")
             return
 
-        # 禁用按钮
+        # 禁用按钮并显示保存状态
         self.test_btn.setEnabled(False)
         self.save_btn.setEnabled(False)
         self.save_btn.setText("保存中...")
 
-        # 创建并启动保存线程
-        self.save_thread = QinglongOperationThread("save", config)
-        self.save_thread.success.connect(self.on_save_success)
-        self.save_thread.error.connect(self.on_save_error)
-        self.save_thread.finished.connect(self.on_save_finished)
-        self.save_thread.start()
+        try:
+            # 直接保存配置文件
+            config_path = get_config_path()
+            with open(config_path, "w") as f:
+                json.dump(config, f)
 
-    def on_save_success(self, message):
-        QMessageBox.information(self, "成功", message)
-        # 导入现有的JD_COOKIE
-        if isinstance(self.parent, AccountListWindow):
-            self.parent.import_from_qinglong()
-        self.close()
+            # 更新状态栏显示
+            if isinstance(self.parent, AccountListWindow):
+                self.parent.statusBar.showMessage("青龙配置已保存", 3000)
+                # 异步导入现有的JD_COOKIE
+                QTimer.singleShot(100, lambda: self.parent.import_from_qinglong())
 
-    def on_save_error(self, error):
-        QMessageBox.critical(self, "错误", f"连接青龙面板失败：{error}")
+            # 关闭设置窗口
+            self.close()
 
-    def on_save_finished(self):
-        # 恢复按钮状态
-        self.test_btn.setEnabled(True)
-        self.save_btn.setEnabled(True)
-        self.save_btn.setText("保存设置")
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"保存配置失败：{str(e)}")
+        finally:
+            # 恢复按钮状态
+            self.test_btn.setEnabled(True)
+            self.save_btn.setEnabled(True)
+            self.save_btn.setText("保存设置")
 
 
 class AccountListWindow(QMainWindow):
@@ -1002,15 +1006,7 @@ class QinglongOperationThread(QThread):
         try:
             ql = Qinglong(self.config)
 
-            if self.operation == "save":
-                # 测试连接并保存配置
-                ql.get_env()  # 测试连接
-                config_path = get_config_path()
-                with open(config_path, "w") as f:
-                    json.dump(self.config, f)
-                self.success.emit("设置保存成功！")
-
-            elif self.operation == "import":
+            if self.operation == "import":
                 # 从青龙导入环境变量
                 envs = ql.get_env()
                 self.env_result.emit(envs)
@@ -1018,7 +1014,7 @@ class QinglongOperationThread(QThread):
             elif self.operation == "add_cookie":
                 # 添加cookie到青龙
                 ql.insert_env([self.data])
-                self.success.emit("同步到青龙成功")
+                # 不发送成功信号，避免弹窗
 
         except Exception as e:
             self.error.emit(str(e))
