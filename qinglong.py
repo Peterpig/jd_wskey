@@ -52,7 +52,7 @@ class Qinglong:
         try:
             cls.token = response["token"]
         except KeyError:
-            raise KeyError(f"获取token失败")
+            raise KeyError(f"获取token失败, {response}")
 
     @retry(tries=TRY_TIMES, delay=2, backoff=2)
     def request_method(self, method, url, params=None, data=None):
@@ -162,16 +162,16 @@ class Qinglong:
 
     def put_cron(self, task_info: Dict[str, str]):
         """
-            task_info = {
-                "name": "大牌1220",
-                "command": "task 6dylan6_jdpro/jd_dplh1220.js",
-                "schedule": "1 1,18 * * *",
-                "extra_schedules": null,
-                "labels": [],
-                "task_before": null,
-                "task_after": null,
-                "id": 6826
-            }
+        task_info = {
+            "name": "大牌1220",
+            "command": "task 6dylan6_jdpro/jd_dplh1220.js",
+            "schedule": "1 1,18 * * *",
+            "extra_schedules": null,
+            "labels": [],
+            "task_before": null,
+            "task_after": null,
+            "id": 6826
+        }
         """
         url = self.host + "/open/crons"
         response = self.request_method("put", url, data=task_info)

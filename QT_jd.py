@@ -225,10 +225,16 @@ class SettingsWindow(QMainWindow):
         self.client_id_input.setPlaceholderText("在青龙面板系统设置->应用设置中获取")
 
         self.client_secret_input = QLineEdit()
-        self.client_secret_input.setMinimumHeight(36)  # 设置最小高度
+        self.client_secret_input.setMinimumHeight(36)
         self.client_secret_input.setPlaceholderText(
             "在青龙面板系统设置->应用设置中获取"
         )
+        self.client_secret_input.setEchoMode(
+            QLineEdit.EchoMode.Password
+        )  # 设置为密码模式
+
+        # 添加鼠标事件处理
+        self.client_secret_input.installEventFilter(self)
 
         # 添加输入框和标签
         for label_text, input_widget, tip_text in [
@@ -300,6 +306,10 @@ class SettingsWindow(QMainWindow):
                 background-color: white;
                 font-size: 14px;
             }
+            QLineEdit[echoMode="2"] {  /* Password mode */
+                lineedit-password-character: 9679;  /* 使用圆点字符 */
+                font-size: 14px;
+            }
             QLineEdit:focus {
                 border-color: #1890ff;
                 border-width: 1.5px;
@@ -323,6 +333,15 @@ class SettingsWindow(QMainWindow):
         )
 
         self.parent = parent  # 保存父窗口引用
+
+    def eventFilter(self, obj, event):
+        """事件过滤器，处理鼠标悬浮事件"""
+        if obj == self.client_secret_input:
+            if event.type() == event.Type.Enter:  # 鼠标进入
+                self.client_secret_input.setEchoMode(QLineEdit.EchoMode.Normal)
+            elif event.type() == event.Type.Leave:  # 鼠标离开
+                self.client_secret_input.setEchoMode(QLineEdit.EchoMode.Password)
+        return super().eventFilter(obj, event)
 
     def test_connection(self):
         config = {
@@ -924,6 +943,9 @@ class AccountListWindow(QMainWindow):
         QMessageBox.warning(self, "错误", f"从青龙导入失败：{error}")
 
     def show_import_results(self, success_count, update_count, failed_count):
+        """显示导入结果"""
+        self.loading_label.clear()  # 清除加载指示
+
         result_message = []
         if success_count > 0:
             result_message.append(f"✅ 导入{success_count}个")
@@ -933,7 +955,12 @@ class AccountListWindow(QMainWindow):
             result_message.append(f"❌ 失败{failed_count}个")
 
         if result_message:
-            self.statusBar.showMessage(" | ".join(result_message), 3000)
+            final_message = " | ".join(result_message)
+        else:
+            final_message = "没有需要同步的账号"
+
+        # 在状态栏显示结果，3秒后自动消失
+        self.statusBar.showMessage(final_message, 3000)
 
     def auto_sync_from_qinglong(self):
         """自动从青龙同步数据"""
@@ -970,23 +997,6 @@ class AccountListWindow(QMainWindow):
     def on_auto_sync_finished(self):
         """自动同步完成处理"""
         self.loading_label.clear()
-
-    def show_import_results(self, success_count, update_count, failed_count):
-        """显示导入结果"""
-        self.loading_label.clear()
-        result_message = []
-        if success_count > 0:
-            result_message.append(f"✅ 导入{success_count}个")
-        if update_count > 0:
-            result_message.append(f"🔄 更新{update_count}个")
-        if failed_count > 0:
-            result_message.append(f"❌ 失败{failed_count}个")
-
-        if result_message:
-            final_message = "自动同步完成: " + " | ".join(result_message)
-            self.statusBar.showMessage(final_message, 5000)
-        else:
-            self.statusBar.showMessage("没有需要同步的账号", 5000)
 
 
 # 添加新的线程类用于保存设置和导入cookie
