@@ -19,6 +19,7 @@ from utils.color_and_shape import get_text_by_tips, get_tips, get_X_Y
 from utils.slide import slider_img, get_html_base_postion
 from utils.utils import get_cookies, get_logger, try_many_times
 from utils.bitwarden import get_username_passwd_from_bit
+from utils.ai import AI
 
 ENV_KEEP_KEYS = {"id", "value", "name", "remarks"}
 
@@ -36,6 +37,7 @@ bit_id_map.json
 """
 
 bit_id_map = json.load(open("./bit_id_map.json"))
+ai = AI()
 
 
 def getElement(driver, locateType, locatorExpression, time=5, all=False):
@@ -144,12 +146,23 @@ def cpc_img_info(browser):
         target_num = 4
         res = get_text_by_tips(cpc_image_path, tip)
         logger.info(f"res == {json.dumps(res, indent=2, ensure_ascii=False)}")
+
         if (not res) or (len(res) != target_num):
-           return
-        try:
-            targets = [(postion['x'], postion['y']) for tip, postion in res]
-        except Exception as e:
-            return False
+            res = ai.chat(tip, cpc_image_path)
+            logger.info(f"[AI] res == {res}")
+            try:
+                if res and res['status'] == 'success':
+                    results = res['results']
+                    targets = [results[t].split(',') for t in tip]
+                    logger.info(f"[AI] 获取到坐标: {targets}")
+            except Exception as e:
+                logger.error(f"[AI] 获取坐标失败: {e}")
+                return False
+        else:
+            try:
+                targets = [(postion['x'], postion['y']) for tip, postion in res]
+            except Exception as e:
+                return False
     else:
         res = get_X_Y(cpc_image_path, tip)
         X, Y = res['X'], res['Y']
@@ -333,6 +346,9 @@ def serch_ck(pin, envlist):
 
 @try_many_times(fail_exit=True)
 def set_qinglong_ck(qinglong, envlist, cookie, username):
+    if not (cookie['pt_key'] and cookie['pt_pin']):
+        return None
+
     ck = (
         f"pt_key={cookie['pt_key']};pt_pin={cookie['pt_pin']};__time={cookie['__time']};username={username};"
     )
@@ -420,6 +436,7 @@ async def main(*bit_users):
     if msg_str:
         send_bark(msg_str)
     logger.info(f"Cookie设置完成, {msg_str}")
+    return success
 
 if __name__ == "__main__":
     fire.Fire(main)
