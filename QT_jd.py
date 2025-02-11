@@ -10,7 +10,7 @@ from datetime import datetime
 from PyQt6.QtCore import Qt, QThread, QTimer, QUrl, pyqtSignal
 from PyQt6.QtGui import QIcon
 from PyQt6.QtNetwork import QNetworkCookie
-from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
+from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile, QWebEngineSettings
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import (
     QApplication,
@@ -121,8 +121,17 @@ class OrderWindow(QMainWindow):
             """
             )
 
-            # 创建自定义profile以管理cookie
-            self.profile = QWebEngineProfile("jd_profile", self.web_view)
+            # 设置 WebEngine 选项
+            self.profile = QWebEngineProfile("jd_order_profile", self.web_view)
+            self.profile.setPersistentCookiesPolicy(
+                QWebEngineProfile.PersistentCookiesPolicy.NoPersistentCookies
+            )
+
+            self.settings = self.profile.settings()
+            self.settings.setAttribute(
+                QWebEngineSettings.WebAttribute.WebGLEnabled, False
+            )
+
             self.webpage = QWebEnginePage(self.profile, self.web_view)
             self.web_view.setPage(self.webpage)
 
@@ -491,11 +500,13 @@ class AccountListWindow(QMainWindow):
                 border: 1px solid #e8e8e8;
                 border-radius: 4px;
                 padding: 4px 0;
+                color: #333;  /* 设置菜单文字颜色 */
             }
             QMenu::item {
                 padding: 8px 20px;
                 border-radius: 4px;
                 margin: 2px 4px;
+                color: #333;  /* 设置菜单项文字颜色 */
             }
             QMenu::item:selected {
                 background-color: #e6f7ff;
@@ -530,7 +541,41 @@ class AccountListWindow(QMainWindow):
         self.table_widget = QTableWidget()
         self.table_widget.setColumnCount(3)
         self.table_widget.setHorizontalHeaderLabels(["序号", "账户", "添加时间"])
-        self.table_widget.verticalHeader().setVisible(False)
+        self.table_widget.verticalHeader().setVisible(False)  # 隐藏默认的行号
+
+        # 设置表格样式
+        self.table_widget.setStyleSheet(
+            """
+            QTableWidget {
+                background-color: white;
+                alternate-background-color: #fafafa;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                color: #333;
+                gridline-color: #f0f0f0;
+            }
+            QTableWidget::item {
+                padding: 8px;
+                color: #333;
+            }
+            QHeaderView::section {
+                background-color: #f5f5f5;
+                color: #333;
+                padding: 8px;
+                border: none;
+                border-bottom: 1px solid #ddd;
+            }
+            QTableWidget::item:selected {
+                background-color: #e6f7ff;
+                color: #1890ff;
+            }
+            /* 序号列的特殊样式 */
+            QTableWidget::item:first-column {
+                color: #666;
+                font-size: 13px;
+            }
+            """
+        )
 
         # 设置表格属性
         self.table_widget.setShowGrid(True)  # 显示网格线
@@ -617,9 +662,11 @@ class AccountListWindow(QMainWindow):
                 border-top: 1px solid #ddd;
                 padding: 5px;
                 font-size: 13px;
+                color: #333;  /* 设置状态栏文字颜色 */
             }
             QLabel {
                 padding: 3px;
+                color: #333;  /* 设置状态栏标签文字颜色 */
             }
         """
         )
@@ -680,6 +727,21 @@ class AccountListWindow(QMainWindow):
         context_menu = QMenu(self)
         context_menu.setStyleSheet(
             """
+            QMenu {
+                background-color: white;
+                border: 1px solid #ddd;
+                padding: 5px;
+                color: #333;  /* 设置右键菜单文字颜色 */
+            }
+            QMenu::item {
+                padding: 8px 20px;
+                border-radius: 4px;
+                color: #333;  /* 设置右键菜单项文字颜色 */
+            }
+            QMenu::item:selected {
+                background-color: #f5f5f5;
+                color: #1890ff;
+            }
             QMenu::separator {
                 height: 1px;
                 background-color: #eee;
@@ -688,11 +750,11 @@ class AccountListWindow(QMainWindow):
         """
         )
 
-        edit_action = context_menu.addAction("✏️ 编辑账户")
         delete_action = context_menu.addAction("🗑️ 删除账户")
         details_action = context_menu.addAction("📋 查看详情")
         orders_action = context_menu.addAction("🛒 查看订单")
         asset_action = context_menu.addAction("💰 账户资产")
+        service_action = context_menu.addAction("🎯 京东客服")  # 新增客服选项
 
         context_menu.addSeparator()
 
@@ -702,9 +764,7 @@ class AccountListWindow(QMainWindow):
 
         action = context_menu.exec(self.table_widget.mapToGlobal(position))
 
-        if action == edit_action:
-            self.edit_account(account_item)
-        elif action == delete_action:
+        if action == delete_action:
             self.delete_account(account_item)
         elif action == details_action:
             self.show_details(account_item)
@@ -712,6 +772,8 @@ class AccountListWindow(QMainWindow):
             self.show_orders(account_item)
         elif action == asset_action:
             self.show_assets(account_item)
+        elif action == service_action:
+            self.show_service(account_item)  # 新增客服处理
         elif action == export_action:
             self.export_data(account_item)
         elif action == backup_action:
@@ -847,17 +909,17 @@ class AccountListWindow(QMainWindow):
         # 添加序号
         num_item = QTableWidgetItem(str(row + 1))
         num_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)  # 居中对齐
-        num_item.setBackground(Qt.GlobalColor.transparent)  # 设置初始背景色
+        num_item.setFlags(
+            num_item.flags() & ~Qt.ItemFlag.ItemIsEditable
+        )  # 设置为不可编辑
         self.table_widget.setItem(row, 0, num_item)
 
         # 添加账户名
         name_item = QTableWidgetItem(username)
-        name_item.setBackground(Qt.GlobalColor.transparent)  # 设置初始背景色
         self.table_widget.setItem(row, 1, name_item)
 
         # 添加时间
         time_item = QTableWidgetItem(add_time)
-        time_item.setBackground(Qt.GlobalColor.transparent)  # 设置初始背景色
         self.table_widget.setItem(row, 2, time_item)
 
         # 存储完整数据
@@ -885,15 +947,15 @@ class AccountListWindow(QMainWindow):
                 return row
         return -1
 
-    # 添加更新序号的方法
     def update_row_numbers(self):
+        """更新所有行的序号"""
         for row in range(self.table_widget.rowCount()):
             num_item = QTableWidgetItem(str(row + 1))
-            num_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            num_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)  # 居中对齐
+            num_item.setFlags(
+                num_item.flags() & ~Qt.ItemFlag.ItemIsEditable
+            )  # 设置为不可编辑
             self.table_widget.setItem(row, 0, num_item)
-
-    def edit_account(self, item):
-        QMessageBox.information(self, "编辑账户", f"正在编辑: {item.text()}")
 
     def delete_account(self, item):
         reply = QMessageBox.question(
@@ -940,6 +1002,24 @@ class AccountListWindow(QMainWindow):
 
     def backup_account(self, item):
         QMessageBox.information(self, "备份账户", f"备份 {item.text()} 的数据")
+
+    def show_service(self, account_item):
+        """显示京东客服"""
+        try:
+            account_data = account_item.data(Qt.ItemDataRole.UserRole)
+            if not account_data:
+                return
+
+            cookies = {
+                "pt_key": account_data["pt_key"],
+                "pt_pin": account_data["pt_pin"],
+            }
+
+            self.service_window = ServiceWindow(cookies, account_item.text())
+            self.service_window.show()
+
+        except Exception as e:
+            QMessageBox.warning(self, "错误", f"打开客服失败：{str(e)}")
 
     def import_from_qinglong(self):
         try:
@@ -1198,8 +1278,77 @@ class AssetWindow(QMainWindow):
             )
         )
 
-        # 设置窗口标志
-        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)
+        # 移除置顶标志，只保留普通窗口标志
+        self.setWindowFlags(Qt.WindowType.Window)
+
+    def create_cookie(self, name, value):
+        cookie = QNetworkCookie(name.encode(), value.encode())
+        cookie.setDomain(".jd.com")
+        cookie.setPath("/")
+        return cookie
+
+
+class ServiceWindow(QMainWindow):
+    """京东客服窗口"""
+
+    def __init__(self, cookies, account_name):
+        super().__init__()
+        self.setWindowTitle(f"京东客服 - {account_name}")
+
+        # 调整窗口大小和位置
+        screen = QApplication.primaryScreen().geometry()
+        self.setGeometry(
+            screen.width() // 4,
+            screen.height() // 4,
+            450,  # 设置合适的宽度
+            700,  # 设置合适的高度
+        )
+
+        # 创建主窗口部件
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        layout = QVBoxLayout(central_widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        # 创建WebView
+        self.web_view = QWebEngineView()
+        layout.addWidget(self.web_view)
+
+        # 设置窗口样式
+        self.setStyleSheet(
+            """
+            QMainWindow {
+                background-color: #f5f5f5;
+            }
+            QWebEngineView {
+                border: none;
+                background-color: white;
+            }
+            """
+        )
+
+        # 创建自定义profile以管理cookie
+        self.profile = QWebEngineProfile("jd_service_profile", self.web_view)
+        self.webpage = QWebEnginePage(self.profile, self.web_view)
+        self.web_view.setPage(self.webpage)
+
+        # 设置网页缩放比例
+        self.web_view.setZoomFactor(1.0)
+
+        # 设置cookies
+        cookie_store = self.profile.cookieStore()
+        for name, value in cookies.items():
+            cookie_store.setCookie(self.create_cookie(name, value))
+
+        # 加载京东客服页面
+        self.web_view.setUrl(
+            QUrl(
+                "https://jdcs.m.jd.com/after/index.action?categoryId=600&v=6&entry=m_self_jd&sid="
+            )
+        )
+
+        # 移除置顶标志，只保留普通窗口标志
+        self.setWindowFlags(Qt.WindowType.Window)
 
     def create_cookie(self, name, value):
         cookie = QNetworkCookie(name.encode(), value.encode())
