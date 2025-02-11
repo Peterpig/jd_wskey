@@ -81,6 +81,33 @@ def setup_logging():
         return None
 
 
+def create_jd_cookie(name, value, domain=".jd.com", path="/"):
+    """
+    创建京东网站通用的cookie
+
+    Args:
+        name (str): cookie名称
+        value (str): cookie值
+        domain (str, optional): cookie域名. 默认为 ".jd.com"
+        path (str, optional): cookie路径. 默认为 "/"
+
+    Returns:
+        QNetworkCookie: 创建的cookie对象
+
+    Raises:
+        Exception: cookie创建失败时抛出异常
+    """
+    try:
+        cookie = QNetworkCookie(name.encode(), value.encode())
+        cookie.setDomain(domain)
+        cookie.setPath(path)
+        return cookie
+    except Exception as e:
+        logging.error(f"创建Cookie失败: {str(e)}")
+        logging.error(traceback.format_exc())
+        raise
+
+
 class OrderWindow(QMainWindow):
     def __init__(self, cookies, account_name):
         try:
@@ -132,16 +159,13 @@ class OrderWindow(QMainWindow):
                 QWebEngineSettings.WebAttribute.WebGLEnabled, False
             )
 
-            self.webpage = QWebEnginePage(self.profile, self.web_view)
-            self.web_view.setPage(self.webpage)
-
             # 设置网页缩放比例
             self.web_view.setZoomFactor(0.7)  # 减小缩放比例到70%
 
             # 设置cookies
             cookie_store = self.profile.cookieStore()
             for name, value in cookies.items():
-                cookie_store.setCookie(self.create_cookie(name, value))
+                cookie_store.setCookie(create_jd_cookie(name, value))
 
             # 加载京东订单页面
             self.web_view.setUrl(
@@ -178,19 +202,6 @@ class OrderWindow(QMainWindow):
             logging.info("页面加载成功")
         else:
             logging.error("页面加载失败")
-
-    def create_cookie(self, name, value):
-        try:
-
-            logging.info(f"创建Cookie: {name}")
-            cookie = QNetworkCookie(name.encode(), value.encode())
-            cookie.setDomain(".jd.com")
-            cookie.setPath("/")
-            return cookie
-        except Exception as e:
-            logging.error(f"创建Cookie失败: {str(e)}")
-            logging.error(traceback.format_exc())
-            raise
 
 
 # 添加一个新的线程类来处理测试连接
@@ -1269,7 +1280,7 @@ class AssetWindow(QMainWindow):
         # 设置cookies
         cookie_store = self.profile.cookieStore()
         for name, value in cookies.items():
-            cookie_store.setCookie(self.create_cookie(name, value))
+            cookie_store.setCookie(create_jd_cookie(name, value))
 
         # 加载京东资产页面
         self.web_view.setUrl(
@@ -1280,12 +1291,6 @@ class AssetWindow(QMainWindow):
 
         # 移除置顶标志，只保留普通窗口标志
         self.setWindowFlags(Qt.WindowType.Window)
-
-    def create_cookie(self, name, value):
-        cookie = QNetworkCookie(name.encode(), value.encode())
-        cookie.setDomain(".jd.com")
-        cookie.setPath("/")
-        return cookie
 
 
 class ServiceWindow(QMainWindow):
@@ -1338,7 +1343,7 @@ class ServiceWindow(QMainWindow):
         # 设置cookies
         cookie_store = self.profile.cookieStore()
         for name, value in cookies.items():
-            cookie_store.setCookie(self.create_cookie(name, value))
+            cookie_store.setCookie(create_jd_cookie(name, value))
 
         # 加载京东客服页面
         self.web_view.setUrl(
@@ -1349,12 +1354,6 @@ class ServiceWindow(QMainWindow):
 
         # 移除置顶标志，只保留普通窗口标志
         self.setWindowFlags(Qt.WindowType.Window)
-
-    def create_cookie(self, name, value):
-        cookie = QNetworkCookie(name.encode(), value.encode())
-        cookie.setDomain(".jd.com")
-        cookie.setPath("/")
-        return cookie
 
 
 def get_config_path():
@@ -1371,6 +1370,10 @@ def get_config_path():
 
 def main():
     try:
+        # 设置环境变量以减少Qt WebEngine的日志输出
+        os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--disable-logging"
+        os.environ["QT_LOGGING_RULES"] = "qt.webenginecontext.debug=false"
+
         # 设置日志
         log_file = setup_logging()
         logger = logging.getLogger("JDManager")
