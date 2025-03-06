@@ -12,6 +12,7 @@ from PIL import Image
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.common.action_chains import ActionChains, ActionBuilder
 
 from qinglong import init_ql
 from utils.selenium_browser import get_browser
@@ -37,8 +38,6 @@ bit_id_map.json
 """
 
 bit_id_map = json.load(open("./bit_id_map.json"))
-ai = AI()
-
 
 def getElement(driver, locateType, locatorExpression, time=5, all=False):
     try:
@@ -148,12 +147,14 @@ def cpc_img_info(browser):
         logger.info(f"res == {json.dumps(res, indent=2, ensure_ascii=False)}")
 
         if (not res) or (len(res) != target_num):
+            ai = AI()
             res = ai.chat(tip, cpc_image_path)
             logger.info(f"[AI] res == {res}")
             try:
                 if res and res['status'] == 'success':
                     results = res['results']
-                    targets = [results[t].split(',') for t in tip]
+                    # targets = [results[t].split(',') for t in tip]
+                    targets = [list(map(int, results[t].split(','))) for t in tip]
                     logger.info(f"[AI] 获取到坐标: {targets}")
             except Exception as e:
                 logger.error(f"[AI] 获取坐标失败: {e}")
@@ -181,6 +182,7 @@ def cpc_img_info(browser):
         Y_abs = base_y + rect_y + target[1]
 
         browser.switch_to.window(browser.current_window_handle)
+
         pyautogui.moveTo(X_abs, Y_abs)
         pyautogui.click()
         time.sleep(random.random())
@@ -234,6 +236,7 @@ def cpc_img_info(browser):
 def verification(browser):
     time.sleep(random.random())
 
+    browser.save_screenshot("screenshot.png")
     if not getElement(browser, By.ID, "cpc_img"):
         return True
 
@@ -243,7 +246,8 @@ def verification(browser):
         voicemode.click()
         verify_code(browser)
 
-    while True:
+    i = 50
+    while i >= 0:
         textTip = getElement(browser, By.CLASS_NAME, "text-tip")
 
         logger.info("开始处理验证....")
@@ -266,6 +270,7 @@ def verification(browser):
             jcap_refresh.click()
 
         time.sleep(random.random())
+        i =- 1
 
 
 @try_many_times(fail_exit=True)
@@ -276,6 +281,7 @@ def get_ck(jd_username, jd_passwd):
         # browser.maximize_window()
         wait = WebDriverWait(browser, timeout=20)
 
+        pt_key, pt_pin, cookie = "", "", ""
         for n in range(8):
             browser.get("https://plogin.m.jd.com/login/login")
             logger.info("请在网页端通过手机号码登录")
@@ -308,11 +314,10 @@ def get_ck(jd_username, jd_passwd):
             if not success:
                 continue
 
-            # wait.until(EC.presence_of_element_located((By.ID, "msShortcutMenu")))
+            wait.until(EC.presence_of_element_located((By.ID, "commonNav")))
             # browser.get("https://home.m.jd.com/myJd/newhome.action")
             # username2 = getElement(browser, By.CLASS_NAME, "my_header_name").text
 
-            pt_key, pt_pin, cookie = "", "", ""
             for _ in browser.get_cookies():
                 if _["name"] == "pt_key":
                     pt_key = _["value"]

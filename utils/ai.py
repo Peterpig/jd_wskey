@@ -64,7 +64,7 @@ class AI:
             )
             return json.loads(completion.choices[0].message.content)
         except Exception as e:
-            return '{"status": "fail", "message": "识别不到对应的文字"}'
+            return json.dumps({"status": "fail", "message": f"识别不到对应的文字{str(e)}"}, ensure_ascii=False)
 
 
 
