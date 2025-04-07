@@ -148,3 +148,5 @@ class bezierTrajectory:
                 s.append([i, fun(i)])
         return {"trackArray": np.array(s), "P": w}
 
+
+cBezier = bezierTrajectory()
