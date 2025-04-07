@@ -99,8 +99,7 @@ def slider_img(browser):
     # 安全验证
     background = browser.find_element(By.ID, "cpc_img")
     target = browser.find_element(By.ID, "small_img")
-    silder_p = browser.find_element(By.CLASS_NAME, "sp_msg")
-    silder = silder_p.find_element(By.TAG_NAME, "img")
+    silder = browser.find_element(By.CLASS_NAME, "move-img")
 
     res = indify_img(
         background_b64=background.get_attribute("src"),

@@ -248,7 +248,7 @@ def verification(browser):
 
     i = 50
     while i >= 0:
-        textTip = getElement(browser, By.CLASS_NAME, "text-tip")
+        textTip = getElement(browser, By.CLASS_NAME, "sp-msg")
 
         logger.info("开始处理验证....")
         if textTip and "拖动箭头" in textTip.text:
