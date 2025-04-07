@@ -11,6 +11,7 @@ from PIL import Image
 from selenium.webdriver.common.by import By
 
 from utils.utils import get_logger
+from utils.cBezier import cBezier
 
 logger = get_logger(__file__.replace('.py', ''))
 
@@ -134,7 +135,10 @@ def slider_img(browser):
     browser.switch_to.window(browser.current_window_handle)
 
     # dragTo(X, Y, X_TO, Y_TO)
-    human_like_drag(X, Y, X_TO, Y_TO)
+    # human_like_drag(X, Y, X_TO, Y_TO)
+    trackArray = cBezier.trackArray(X, Y, X_TO, Y_TO, 150, 10, 0.5, 0, 10)
+    for i in trackArray:
+        pyautogui.moveTo(i[0], i[1], random.uniform(0.1, 0.3), pyautogui.easeInOutQuad)
     pyautogui.moveTo(x_ori, y_ori)
     return True
 
