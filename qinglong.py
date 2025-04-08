@@ -63,7 +63,8 @@ class Qinglong:
             if params:
                 kwargs["params"] = params
 
-            response = requests.request(method=method, url=url, **kwargs)
+
+            response = requests.request(method=method, url=url, verify=False, **kwargs)
             response_json = response.json()
         except Exception as e:
             logging.error(f"访问青龙接口{url}失败，请确保青龙已经正常启动！")
