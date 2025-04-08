@@ -11,7 +11,6 @@ from PIL import Image
 from selenium.webdriver.common.by import By
 
 from utils.utils import get_logger
-from utils.cBezier import cBezier
 
 logger = get_logger(__file__.replace('.py', ''))
 

@@ -54,7 +54,7 @@ class Qinglong:
         except KeyError:
             raise KeyError(f"获取token失败, {response}")
 
-    @retry(tries=TRY_TIMES, delay=2, backoff=2)
+    @retry(tries=TRY_TIMES, delay=2)
     def request_method(self, method, url, params=None, data=None):
         try:
             kwargs = {"timeout": 30, "headers": self.header}
