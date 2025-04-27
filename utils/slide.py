@@ -133,18 +133,8 @@ def slider_img(browser):
     browser.switch_to.window(browser.current_window_handle)
 
     human_like_drag(X, Y, X_TO, Y_TO)
-    pyautogui.moveTo(x_ori, y_ori)
+    pyautogui.moveTo(x_ori, y_ori, random.uniform(0.1, 0.2), pyautogui.easeInOutQuad)
     return True
-
-
-def dragTo(X, Y, X_TO, Y_TO):
-    pyautogui.moveTo(X, Y)
-    pyautogui.dragTo(
-        X_TO,
-        Y_TO,
-        random.randint(2, 3),
-        pyautogui.easeInOutBack, button="left"
-    )
 
 
 def human_like_drag(X, Y, X_TO, Y_TO):

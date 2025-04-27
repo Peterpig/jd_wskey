@@ -248,7 +248,7 @@ def verification(browser):
 
     i = 50
     while i >= 0:
-        textTip = getElement(browser, By.CLASS_NAME, "sp-msg")
+        textTip = getElement(browser, By.CLASS_NAME, "sp-msg", time=3)
 
         logger.info("开始处理验证....")
         if textTip and "拖动箭头" in textTip.text:
@@ -256,21 +256,19 @@ def verification(browser):
             slider_img(browser)
 
 
-        if getElement(browser, By.CLASS_NAME, "tip"):
+        if getElement(browser, By.CLASS_NAME, "tip", time=1):
             logger.error("滑块验证失败，开始图形识别....")
             cpc_img_info(browser)
 
-        navimg = getElement(browser, By.CLASS_NAME, "nav-img")
+        navimg = getElement(browser, By.CLASS_NAME, "nav-img", time=3)
         if navimg:
             return True
 
         logger.info(f"验证失败，刷新一下")
-        jcap_refresh = getElement(browser, By.CLASS_NAME, "jcap_refresh")
-        if jcap_refresh:
-            jcap_refresh.click()
-
-        time.sleep(random.random())
-        i =- 1
+        #jcap_refresh = getElement(browser, By.CLASS_NAME, "jcap_refresh")
+        #if jcap_refresh:
+        #    jcap_refresh.find_element(By.CLASS_NAME, "optBtnText").click()
+        i -= 1
 
 
 @try_many_times(fail_exit=True)
