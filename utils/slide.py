@@ -124,6 +124,8 @@ def slider_img(browser):
         base_x + rect["x"] + (rect["width"] / 2),
         base_y + silder.location["y"] + (rect["height"] / 2),
     )
+    X = X + random.uniform(-5, 5)
+    Y = Y + random.uniform(-6, 6)
 
     # 滑块结束位置
     X_TO, Y_TO = int(X + offset), int(Y + random.randint(2, 10))
@@ -149,10 +151,10 @@ def human_like_drag(X, Y, X_TO, Y_TO):
     time.sleep(random.uniform(0.1, 0.3))
 
     # 定义随机过冲和回拉
-    overshoot_x = X_TO + random.uniform(10, 15)
-    overshoot_y = Y_TO + random.uniform(10, 15)
-    recovery_x = X_TO + random.uniform(-1, 2)
-    recovery_y = Y_TO + random.uniform(-1, 2)
+    overshoot_x = X_TO + random.uniform(-5, 10)
+    overshoot_y = Y_TO + random.uniform(-5, 10)
+    recovery_x = X_TO + random.uniform(-2, 2)
+    recovery_y = Y_TO + random.uniform(-2, 2)
 
     # 使用曲线轨迹移动
     def move_with_curve(start_x, start_y, end_x, end_y, duration):
