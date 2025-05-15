@@ -246,7 +246,7 @@ def verification(browser):
         voicemode.click()
         verify_code(browser)
 
-    i = 50
+    i = 30
     while i >= 0:
         textTip = getElement(browser, By.CLASS_NAME, "sp-msg", time=3)
 
@@ -383,18 +383,21 @@ def send_bark(msg_str):
     requests.get(f'https://bark.6tun.com/dvvFu9p3TvZHrHipusfUKi/京东Cookie设置成功/{msg_str}')
 
 
-async def main(*bit_users):
+async def main(update_type='all'):
     qinglong = init_ql()
     envlist = await get_cookies(qinglong)
 
     # 如果没有传要登录的账户，自动从qinglong读取过期ck
-    if not bit_users:
+
+    if update_type == 'all':
+        bit_users = bit_id_map.keys()
+    else:
         disable_cookies = list(filter(lambda x: x["status"] != 0, envlist))
         if not disable_cookies:
-            logger.info(f"暂未获取到过期cookie，全部更新！")
-            bit_users = bit_id_map.keys()
-        else:
-            bit_users = list(map(lambda x: x['remarks'].split('@')[0], disable_cookies))
+            logger.info(f"暂未获取到过期cookie，暂不更新！")
+            return
+
+        bit_users = list(map(lambda x: x['remarks'].split('@')[0], disable_cookies))
 
 
     if not bit_users:

@@ -1,9 +1,10 @@
 import json
 import subprocess
-from utils.utils import get_logger
+from utils.utils import get_logger, try_many_times
 
 logger = get_logger(__file__.replace('.py', ''))
 
+@try_many_times(times=50)
 def get_username_passwd_from_bit(bit_id):
     try:
         out_bytes = subprocess.check_output(
