@@ -7,12 +7,12 @@ import sys
 import traceback
 from datetime import datetime
 
-from PyQt6.QtCore import Qt, QThread, QTimer, QUrl, pyqtSignal
-from PyQt6.QtGui import QIcon
-from PyQt6.QtNetwork import QNetworkCookie
-from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile, QWebEngineSettings
-from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt, QThread, QTimer, QUrl, Signal, QByteArray
+from PySide6.QtGui import QIcon
+from PySide6.QtNetwork import QNetworkCookie
+from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile, QWebEngineSettings
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
     QHeaderView,
@@ -108,6 +108,25 @@ def create_jd_cookie(name, value, domain=".jd.com", path="/"):
         raise
 
 
+def set_cookies_and_load(web_view, url, cookies, domain, delay_ms=400):
+    """
+    先注入所有cookie，延迟一段时间后再加载页面（兼容PySide6）。
+    """
+    cookie_store = web_view.page().profile().cookieStore()
+    # 遍历所有cookie
+    for k, v in cookies.items():
+        cookie = QNetworkCookie()
+        cookie.setName(QByteArray(k.encode()))
+        cookie.setValue(QByteArray(v.encode()))
+        cookie.setDomain(domain)
+        cookie.setPath("/")
+        cookie.setSecure(True)
+        cookie.setHttpOnly(False)
+        cookie_store.setCookie(cookie, QUrl(url))
+    # 延迟加载页面
+    QTimer.singleShot(delay_ms, lambda: web_view.setUrl(QUrl(url)))
+
+
 class OrderWindow(QMainWindow):
     def __init__(self, cookies, account_name):
         try:
@@ -159,20 +178,17 @@ class OrderWindow(QMainWindow):
                 QWebEngineSettings.WebAttribute.WebGLEnabled, False
             )
 
+            # 创建 QWebEnginePage 并设置给 web_view
+            self.webpage = QWebEnginePage(self.profile, self.web_view)
+            self.web_view.setPage(self.webpage)
+
             # 设置网页缩放比例
             self.web_view.setZoomFactor(0.7)  # 减小缩放比例到70%
 
-            # 设置cookies
-            cookie_store = self.profile.cookieStore()
-            for name, value in cookies.items():
-                cookie_store.setCookie(create_jd_cookie(name, value))
-
-            # 加载京东订单页面
-            self.web_view.setUrl(
-                QUrl(
-                    "https://trade.m.jd.com/order/orderlist_jdm.shtml?sceneval=2&jxsid=17389784862254908880&appCode=ms0ca95114&orderType=all&ptag=7155.1.11&source=m_inner_myJd.orderFloor_orderlist"
-                )
-            )
+            # 设置cookies（参照 test.py 方式）
+            order_url = "https://trade.m.jd.com/order/orderlist_jdm.shtml?sceneval=2&jxsid=17389784862254908880&appCode=ms0ca95114&orderType=all&ptag=7155.1.11&source=m_inner_myJd.orderFloor_orderlist"
+            domain = ".jd.com"
+            set_cookies_and_load(self.web_view, order_url, cookies, domain)
 
             # 设置窗口标志
             self.setWindowFlags(
@@ -206,8 +222,8 @@ class OrderWindow(QMainWindow):
 
 # 添加一个新的线程类来处理测试连接
 class TestConnectionThread(QThread):
-    success = pyqtSignal()  # 连接成功信号
-    error = pyqtSignal(str)  # 连接失败信号
+    success = Signal()  # 连接成功信号
+    error = Signal(str)  # 连接失败信号
 
     def __init__(self, config):
         super().__init__()
@@ -1178,10 +1194,10 @@ class AccountListWindow(QMainWindow):
 
 # 添加新的线程类用于保存设置和导入cookie
 class QinglongOperationThread(QThread):
-    success = pyqtSignal(str)  # 成功信号，携带成功消息
-    error = pyqtSignal(str)  # 错误信号，携带错误消息
-    import_result = pyqtSignal(list)  # 导入结果信号，携带账户数据列表
-    env_result = pyqtSignal(list)  # 环境变量结果信号
+    success = Signal(str)  # 成功信号，携带成功消息
+    error = Signal(str)  # 错误信号，携带错误消息
+    import_result = Signal(list)  # 导入结果信号，携带账户数据列表
+    env_result = Signal(list)  # 环境变量结果信号
 
     def __init__(self, operation, config, data=None):
         super().__init__()
@@ -1277,20 +1293,22 @@ class AssetWindow(QMainWindow):
         # 注入JavaScript代码
         self.webpage.loadFinished.connect(lambda: self.webpage.runJavaScript(js_code))
 
-        # 设置cookies
-        cookie_store = self.profile.cookieStore()
-        for name, value in cookies.items():
-            cookie_store.setCookie(create_jd_cookie(name, value))
+        # 设置cookies并加载页面
+        asset_url = "https://my.m.jd.com/asset/index.html?sceneval=2&jxsid=17389784862254908880&appCode=ms0ca95114&ptag=7155.1.58"
+        domain = ".jd.com"
+        set_cookies_and_load(self.web_view, asset_url, cookies, domain)
 
-        # 加载京东资产页面
-        self.web_view.setUrl(
-            QUrl(
-                "https://my.m.jd.com/asset/index.html?sceneval=2&jxsid=17389784862254908880&appCode=ms0ca95114&ptag=7155.1.58"
-            )
-        )
+        # 添加页面加载完成的处理
+        self.webpage.loadFinished.connect(self.handle_load_finished) # 连接加载完成信号
 
         # 移除置顶标志，只保留普通窗口标志
         self.setWindowFlags(Qt.WindowType.Window)
+
+    def handle_load_finished(self, ok):
+        if ok:
+            logging.info("资产页面加载成功")
+        else:
+            logging.error("资产页面加载失败")
 
 
 class ServiceWindow(QMainWindow):
@@ -1340,20 +1358,22 @@ class ServiceWindow(QMainWindow):
         # 设置网页缩放比例
         self.web_view.setZoomFactor(1.0)
 
-        # 设置cookies
-        cookie_store = self.profile.cookieStore()
-        for name, value in cookies.items():
-            cookie_store.setCookie(create_jd_cookie(name, value))
+        # 设置cookies并加载页面
+        service_url = "https://jdcs.m.jd.com/after/index.action?categoryId=600&v=6&entry=m_self_jd&sid="
+        domain = ".jd.com"
+        set_cookies_and_load(self.web_view, service_url, cookies, domain)
 
-        # 加载京东客服页面
-        self.web_view.setUrl(
-            QUrl(
-                "https://jdcs.m.jd.com/after/index.action?categoryId=600&v=6&entry=m_self_jd&sid="
-            )
-        )
+        # 添加页面加载完成的处理
+        self.webpage.loadFinished.connect(self.handle_load_finished) # 连接加载完成信号
 
         # 移除置顶标志，只保留普通窗口标志
         self.setWindowFlags(Qt.WindowType.Window)
+
+    def handle_load_finished(self, ok):
+        if ok:
+            logging.info("客服页面加载成功")
+        else:
+            logging.error("客服页面加载失败")
 
 
 def get_config_path():
