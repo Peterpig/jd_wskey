@@ -96,8 +96,8 @@ def get_html_base_postion(browser):
 
 def slider_img(browser):
     # 安全验证
-    background = browser.find_element(By.ID, "cpc_img")
-    target = browser.find_element(By.ID, "small_img")
+    background = browser.find_element(By.ID, "main_img")
+    target = browser.find_element(By.ID, "slot_img")
     silder = browser.find_element(By.CLASS_NAME, "move-img")
 
     res = indify_img(

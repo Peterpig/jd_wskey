@@ -237,28 +237,31 @@ def verification(browser):
     time.sleep(random.random())
 
     browser.save_screenshot("screenshot.png")
-    if not getElement(browser, By.ID, "cpc_img"):
+    if not getElement(browser, By.ID, "captcha_dom"):
         return True
 
-    msgBtn = getElement(browser, By.CLASS_NAME, "getMsg-btn")
-    if msgBtn and "获取验证码" in msgBtn.text:
-        logger.error("需要短信认证")
-        # verify_code(browser)
-        return False
+    # 短信验证
+    # msgBtn = getElement(browser, By.CLASS_NAME, "getMsg-btn")
+    # if msgBtn and "获取验证码" in msgBtn.text:
+    #     logger.error("需要短信认证")
+    #     # verify_code(browser)
+    #     return False
 
     i = 30
     while i >= 0:
-        textTip = getElement(browser, By.CLASS_NAME, "sp-msg", time=3)
+        # 获取滑块提示文本
+        textTip = getElement(browser, By.CLASS_NAME, "slideTip", time=3)
 
         logger.info("开始处理验证....")
-        if textTip and "拖动箭头" in textTip.text:
+        if textTip and "拖动" in textTip.text and "滑块" in textTip.text:
             logger.info("开始滑块验证....")
             slider_img(browser)
 
 
-        if getElement(browser, By.CLASS_NAME, "tip", time=1):
-            logger.error("滑块验证失败，开始图形识别....")
-            cpc_img_info(browser)
+        # 图形识别验证码。
+        # if getElement(browser, By.CLASS_NAME, "tip", time=1):
+        #     logger.error("滑块验证失败，开始图形识别....")
+        #     cpc_img_info(browser)
 
         navimg = getElement(browser, By.CLASS_NAME, "nav-img", time=3)
         if navimg:
@@ -301,8 +304,7 @@ def get_ck(jd_username, jd_passwd):
             send_keys_interval(password, jd_passwd)
             policy.click()
 
-
-			locator = (By.CSS_SELECTOR, ".btn.J_ping.active")
+            locator = (By.CSS_SELECTOR, ".btn.J_ping.active")
             wait.until(EC.presence_of_element_located(locator))
             login.click()
             time.sleep(random.random())
@@ -310,6 +312,7 @@ def get_ck(jd_username, jd_passwd):
             success = verification(browser)
             if not success:
                 continue
+
 
             wait.until(EC.presence_of_element_located((By.ID, "commonNav")))
             # browser.get("https://home.m.jd.com/myJd/newhome.action")
@@ -382,7 +385,7 @@ def send_bark(msg_str):
     requests.get(f'https://bark.6tun.com/dvvFu9p3TvZHrHipusfUKi/京东Cookie设置成功/{msg_str}')
 
 
-async def main(update_type='all'):
+async def main(update_type='培林'):
     qinglong = init_ql()
     envlist = await get_cookies(qinglong)
 
@@ -447,3 +450,4 @@ async def main(update_type='all'):
 
 if __name__ == "__main__":
     fire.Fire(main)
+    # main('培林')

@@ -11,7 +11,7 @@ BROWSER_TYPE = "Chrome"
 HEADLESS = False
 WINDOW_SIZE = (500, 700)
 DRIVER_PATHS = {
-    "darwin": "./drivers/chromedriver123.0.6312.87",
+    "darwin": "./drivers/chromedriver137.0.7151.70",
     "win32": "./drivers/chromedriver",
 }
 
