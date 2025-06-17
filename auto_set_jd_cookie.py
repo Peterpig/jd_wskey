@@ -240,11 +240,11 @@ def verification(browser):
     if not getElement(browser, By.ID, "cpc_img"):
         return True
 
-    voicemode = getElement(browser, By.CLASS_NAME, "voice-mode", 1)
-    if voicemode:
+    msgBtn = getElement(browser, By.CLASS_NAME, "getMsg-btn")
+    if msgBtn and "获取验证码" in msgBtn.text:
         logger.error("需要短信认证")
-        voicemode.click()
-        verify_code(browser)
+        # verify_code(browser)
+        return False
 
     i = 30
     while i >= 0:
@@ -301,9 +301,8 @@ def get_ck(jd_username, jd_passwd):
             send_keys_interval(password, jd_passwd)
             policy.click()
 
-            # import pdb;pdb.set_trace()
-            # wait.until(EC.presence_of_element_located((By.CLASS_NAME, "btn-active")))
-            locator = (By.CSS_SELECTOR, ".btn.J_ping.active")
+
+			locator = (By.CSS_SELECTOR, ".btn.J_ping.active")
             wait.until(EC.presence_of_element_located(locator))
             login.click()
             time.sleep(random.random())
@@ -391,13 +390,15 @@ async def main(update_type='all'):
 
     if update_type == 'all':
         bit_users = bit_id_map.keys()
-    else:
+    elif update_type == 'part':
         disable_cookies = list(filter(lambda x: x["status"] != 0, envlist))
         if not disable_cookies:
             logger.info(f"暂未获取到过期cookie，暂不更新！")
             return
 
         bit_users = list(map(lambda x: x['remarks'].split('@')[0], disable_cookies))
+    else:
+        bit_users = update_type.split(",")
 
 
     if not bit_users:
