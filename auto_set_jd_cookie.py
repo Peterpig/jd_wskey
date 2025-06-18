@@ -237,15 +237,18 @@ def verification(browser):
     time.sleep(random.random())
 
     browser.save_screenshot("screenshot.png")
+    # 没有 滑块验证码
     if not getElement(browser, By.ID, "captcha_dom"):
+        # 是否有短信验证
+        msgBtn = getElement(browser, By.CLASS_NAME, "getMsg-btn")
+        if msgBtn and "获取验证码" in msgBtn.text:
+            logger.error("需要短信认证")
+            # verify_code(browser)
+            return False
+
         return True
 
-    # 短信验证
-    msgBtn = getElement(browser, By.CLASS_NAME, "getMsg-btn")
-    if msgBtn and "获取验证码" in msgBtn.text:
-        logger.error("需要短信认证")
-        # verify_code(browser)
-        return False
+
 
     i = 30
     while i >= 0:
