@@ -241,11 +241,11 @@ def verification(browser):
         return True
 
     # 短信验证
-    # msgBtn = getElement(browser, By.CLASS_NAME, "getMsg-btn")
-    # if msgBtn and "获取验证码" in msgBtn.text:
-    #     logger.error("需要短信认证")
-    #     # verify_code(browser)
-    #     return False
+    msgBtn = getElement(browser, By.CLASS_NAME, "getMsg-btn")
+    if msgBtn and "获取验证码" in msgBtn.text:
+        logger.error("需要短信认证")
+        # verify_code(browser)
+        return False
 
     i = 30
     while i >= 0:
@@ -333,7 +333,6 @@ def get_ck(jd_username, jd_passwd):
         cookie = {
             "pt_key": pt_key,
             "pt_pin": pt_pin,
-            "__time": time.time(),
         }
         logger.info(f"获取到cookie是：{cookie}")
         return cookie
@@ -355,7 +354,7 @@ def set_qinglong_ck(qinglong, envlist, cookie, username):
         return None
 
     ck = (
-        f"pt_key={cookie['pt_key']};pt_pin={cookie['pt_pin']};__time={cookie['__time']};username={username};"
+        f"pt_key={cookie['pt_key']};pt_pin={cookie['pt_pin']};"
     )
 
     ck_env_dict = serch_ck(cookie["pt_pin"], envlist)
