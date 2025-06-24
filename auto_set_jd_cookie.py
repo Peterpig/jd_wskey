@@ -239,16 +239,7 @@ def verification(browser):
     browser.save_screenshot("screenshot.png")
     # 没有 滑块验证码
     if not getElement(browser, By.ID, "captcha_dom"):
-        # 是否有短信验证
-        msgBtn = getElement(browser, By.CLASS_NAME, "getMsg-btn")
-        if msgBtn and "获取验证码" in msgBtn.text:
-            logger.error("需要短信认证")
-            # verify_code(browser)
-            return False
-
         return True
-
-
 
     i = 30
     while i >= 0:
@@ -269,6 +260,13 @@ def verification(browser):
         navimg = getElement(browser, By.CLASS_NAME, "nav-img", time=3)
         if navimg:
             return True
+
+        # 是否有短信验证
+        msgBtn = getElement(browser, By.CLASS_NAME, "getMsg-btn")
+        if msgBtn and "获取验证码" in msgBtn.text:
+            logger.error("需要短信认证")
+            # verify_code(browser)
+            return 'break'
 
         logger.info(f"验证失败，刷新一下")
         #jcap_refresh = getElement(browser, By.CLASS_NAME, "jcap_refresh")
@@ -314,6 +312,8 @@ def get_ck(jd_username, jd_passwd):
 
             success = verification(browser)
             if not success:
+                if success == "break":
+                    break
                 continue
 
 
