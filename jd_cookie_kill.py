@@ -66,7 +66,7 @@ async def main():
     msg = "\n".join(
         [
             f"{cookie['remarks'].split('@')[0]} cookie 作废成功"
-            for cookie in cookies
+            for cookie in disable_cookies_ids
         ]
     )
     send("京东cookie强制失效", msg)

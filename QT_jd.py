@@ -5,7 +5,7 @@ import platform
 import re
 import sys
 import traceback
-from datetime import datetime
+from datetime import datetime,timezone,timedelta
 
 from PySide6.QtCore import Qt, QThread, QTimer, QUrl, Signal, QByteArray
 from PySide6.QtGui import QIcon
@@ -1076,6 +1076,7 @@ class AccountListWindow(QMainWindow):
         failed_count = 0
 
         for env in jd_cookies:
+            print(f"env == {env}")
             try:
                 cookie = env["value"]
                 remarks = env.get("remarks", "")
@@ -1083,7 +1084,7 @@ class AccountListWindow(QMainWindow):
                 # 构造完整的cookie字符串，包含remarks作为username
                 full_cookie = cookie
                 if remarks:
-                    full_cookie += f";username={remarks}"
+                    full_cookie += f";username={remarks.split('@')[0]}"
 
                 # 使用parse_account_data处理cookie
                 accounts = self.parse_account_data(full_cookie)
@@ -1109,6 +1110,15 @@ class AccountListWindow(QMainWindow):
                         )
                     except ValueError:
                         pass
+                else:
+                    try:
+                        # 2025-06-18T05:25:54.897Z --> 转东8区 2025-06-18 13:25:54
+                        dt = datetime.strptime(env['updatedAt'], "%Y-%m-%dT%H:%M:%S.%fZ")
+                        dt = dt.replace(tzinfo=timezone.utc)  # 明确为UTC时间
+                        add_time = dt.astimezone(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S")
+                    except Exception as e:
+                        print(e)
+                        add_time = ""
 
                 if existing_row >= 0:
                     update_count += 1

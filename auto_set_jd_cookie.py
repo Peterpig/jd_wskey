@@ -312,9 +312,9 @@ def get_ck(jd_username, jd_passwd):
 
             success = verification(browser)
             if not success:
-                if success == "break":
-                    break
                 continue
+            elif success == "break":
+                break
 
 
             wait.until(EC.presence_of_element_located((By.ID, "commonNav")))
