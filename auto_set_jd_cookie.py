@@ -237,12 +237,13 @@ def verification(browser):
     time.sleep(random.random())
 
     browser.save_screenshot("screenshot.png")
-    # 没有 滑块验证码
-    if not getElement(browser, By.ID, "captcha_dom"):
-        return True
 
     i = 30
     while i >= 0:
+        # 没有 滑块验证码
+        if not getElement(browser, By.ID, "captcha_dom"):
+            return True
+
         # 获取滑块提示文本
         textTip = getElement(browser, By.CLASS_NAME, "slideTip", time=3)
 
@@ -250,7 +251,6 @@ def verification(browser):
         if textTip and "拖动" in textTip.text and "滑块" in textTip.text:
             logger.info("开始滑块验证....")
             slider_img(browser)
-
 
         # 图形识别验证码。
         # if getElement(browser, By.CLASS_NAME, "tip", time=1):
@@ -267,6 +267,14 @@ def verification(browser):
             logger.error("需要短信认证")
             # verify_code(browser)
             return 'break'
+
+        try:
+            notice = getElement(browser, By.CLASS_NAME, "notice", all=True)[-1].text
+            if "风险" in notice:
+                logger.error(f"{notice}")
+                return 'break'
+        except:
+            pass
 
         logger.info(f"验证失败，刷新一下")
         #jcap_refresh = getElement(browser, By.CLASS_NAME, "jcap_refresh")
@@ -310,14 +318,25 @@ def get_ck(jd_username, jd_passwd):
             login.click()
             time.sleep(random.random())
 
+
             success = verification(browser)
             if not success:
                 continue
             elif success == "break":
-                break
+                return
 
+            commonNav = EC.presence_of_element_located((By.ID, "commonNav"))
+            if not commonNav:
+                try:
+                    notice = getElement(browser, By.CLASS_NAME, "notice", all=True)[-1].text
+                    if "风险" in notice:
+                        logger.error(f"{notice}")
+                        return 'break'
+                except:
+                    return
 
-            wait.until(EC.presence_of_element_located((By.ID, "commonNav")))
+                continue
+
             # browser.get("https://home.m.jd.com/myJd/newhome.action")
             # username2 = getElement(browser, By.CLASS_NAME, "my_header_name").text
 
@@ -332,6 +351,9 @@ def get_ck(jd_username, jd_passwd):
 
             if pt_key and pt_pin:
                 break
+
+        if not pt_key or not pt_pin:
+            return
 
         cookie = {
             "pt_key": pt_key,
@@ -403,7 +425,7 @@ async def main(update_type='培林'):
 
         bit_users = list(map(lambda x: x['remarks'].split('@')[0], disable_cookies))
     else:
-        bit_users = update_type.split(",")
+        bit_users = [update_type] if isinstance(update_type, str) else update_type
 
 
     if not bit_users:
@@ -429,6 +451,10 @@ async def main(update_type='培林'):
         try:
             cookie = get_ck(jd_username, jd_passwd)
 
+            if not cookie:
+                fails.append(bit_username)
+                continue
+
             succ = set_qinglong_ck(qinglong, envlist, cookie, bit_username)
             if succ:
                 success.append(succ)
@@ -453,3 +479,4 @@ async def main(update_type='培林'):
 if __name__ == "__main__":
     fire.Fire(main)
     # main('培林')
+
