@@ -6,6 +6,8 @@ import re
 import sys
 import traceback
 from datetime import datetime,timezone,timedelta
+import asyncio
+import concurrent.futures
 
 from PySide6.QtCore import Qt, QThread, QTimer, QUrl, Signal, QByteArray
 from PySide6.QtGui import QIcon
@@ -30,6 +32,7 @@ from PySide6.QtWidgets import (
 )
 
 from qinglong import Qinglong
+from jd_cookie_kill import need_login
 
 
 def setup_logging():
@@ -458,8 +461,8 @@ class SettingsWindow(QMainWindow):
             # 更新状态栏显示
             if isinstance(self.parent, AccountListWindow):
                 self.parent.statusBar.showMessage("青龙配置已保存", 3000)
-                # 异步导入现有的JD_COOKIE
-                QTimer.singleShot(100, lambda: self.parent.import_from_qinglong())
+                # 只在设置窗口保存后自动同步一次
+                QTimer.singleShot(100, lambda: self.parent.sync_from_qinglong(is_auto=False))
 
             # 关闭设置窗口
             self.close()
@@ -479,6 +482,30 @@ class SettingsWindow(QMainWindow):
         super().closeEvent(event)
 
 
+class CheckCookieThread(QThread):
+    result = Signal(int, str)  # row, status
+
+    def __init__(self, row, cookie_data, parent=None):
+        super().__init__(parent)
+        self.row = row
+        self.cookie_data = cookie_data
+
+    def run(self):
+        try:
+            cookie_str = f"pt_key={self.cookie_data['pt_key']};pt_pin={self.cookie_data['pt_pin']};"
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            result = loop.run_until_complete(need_login(cookie_str))
+            loop.close()
+            if result:
+                self.result.emit(self.row, "❌ 失效")
+            else:
+                self.result.emit(self.row, "✅ 有效")
+        except Exception as e:
+            logging.error(f"检查cookie状态失败: {str(e)}")
+            self.result.emit(self.row, "⚠️ 错误")
+
+
 class AccountListWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -494,6 +521,11 @@ class AccountListWindow(QMainWindow):
 
         # 修改顶部按钮布局
         top_layout = QHBoxLayout()
+
+        # 添加同步并检测按钮
+        self.sync_btn = QPushButton("🔄 同步并检测")
+        self.sync_btn.clicked.connect(self.sync_and_check)
+        top_layout.addWidget(self.sync_btn)
 
         # 创建青龙菜单按钮
         self.ql_btn = QPushButton("🔮 青龙面板")
@@ -549,14 +581,12 @@ class AccountListWindow(QMainWindow):
 
         # 添加菜单项
         self.settings_action = self.ql_menu.addAction("⚙️ 面板设置")
-        self.sync_action = self.ql_menu.addAction("🔄 同步账号")
+        # self.sync_action = self.ql_menu.addAction("🔄 同步账号")  # 移除菜单里的同步账号
 
         # 设置按钮点击事件
         self.ql_btn.clicked.connect(self.show_ql_menu)
         self.settings_action.triggered.connect(self.show_settings)
-        self.sync_action.triggered.connect(
-            lambda: self.sync_from_qinglong(is_auto=False)
-        )
+        # self.sync_action.triggered.connect(lambda: self.sync_from_qinglong(is_auto=False))
 
         # 添加按钮到布局
         top_layout.addStretch()  # 添加弹簧将按钮推到右边
@@ -566,8 +596,8 @@ class AccountListWindow(QMainWindow):
 
         # 创建表格部件
         self.table_widget = QTableWidget()
-        self.table_widget.setColumnCount(3)
-        self.table_widget.setHorizontalHeaderLabels(["序号", "账户", "添加时间"])
+        self.table_widget.setColumnCount(4)
+        self.table_widget.setHorizontalHeaderLabels(["序号", "账户", "添加时间", "状态"])
         self.table_widget.verticalHeader().setVisible(False)  # 隐藏默认的行号
 
         # 设置表格样式
@@ -621,6 +651,9 @@ class AccountListWindow(QMainWindow):
         header.setSectionResizeMode(
             2, QHeaderView.ResizeMode.ResizeToContents
         )  # 时间列自适应内容
+        header.setSectionResizeMode(
+            3, QHeaderView.ResizeMode.ResizeToContents
+        )  # 状态列自适应内容
         self.table_widget.setColumnWidth(0, 50)  # 设置序号列宽度
 
         main_layout.addWidget(self.table_widget)
@@ -698,9 +731,13 @@ class AccountListWindow(QMainWindow):
         """
         )
 
-        # 初始检查青龙配置并自动同步
+        # 保存检查线程的引用
+        self.check_threads = []
+        self.check_total = 0  # 总共要检测的数量
+        self.check_finished = 0  # 已完成检测的数量
+        # 初始检查青龙配置（并自动同步并检测）
         QTimer.singleShot(0, self.check_qinglong_config)
-        QTimer.singleShot(500, lambda: self.sync_from_qinglong(is_auto=True))
+        QTimer.singleShot(0, self.sync_and_check)
 
     def parse_account_data(self, text):
         # 分割多行文本
@@ -777,6 +814,7 @@ class AccountListWindow(QMainWindow):
         """
         )
 
+        check_status_action = context_menu.addAction("🍪 检查状态")
         delete_action = context_menu.addAction("🗑️ 删除账户")
         details_action = context_menu.addAction("📋 查看详情")
         orders_action = context_menu.addAction("🛒 查看订单")
@@ -791,7 +829,9 @@ class AccountListWindow(QMainWindow):
 
         action = context_menu.exec(self.table_widget.mapToGlobal(position))
 
-        if action == delete_action:
+        if action == check_status_action:
+            self.check_cookie_status(account_item)
+        elif action == delete_action:
             self.delete_account(account_item)
         elif action == details_action:
             self.show_details(account_item)
@@ -823,15 +863,15 @@ class AccountListWindow(QMainWindow):
                     has_config = all(config.values())  # 确保所有配置项都有值
 
             # 更新同步按钮状态
-            self.sync_action.setEnabled(has_config)
+            self.sync_btn.setEnabled(has_config)
             if not has_config:
-                self.sync_action.setText("🔄 同步账号 (请先配置青龙面板)")
+                self.sync_btn.setText("🔄 同步账号 (请先配置青龙面板)")
             else:
-                self.sync_action.setText("🔄 同步账号")
+                self.sync_btn.setText("🔄 同步账号")
 
         except Exception as e:
-            self.sync_action.setEnabled(False)
-            self.sync_action.setText("🔄 同步账号 (配置检查失败)")
+            self.sync_btn.setEnabled(False)
+            self.sync_btn.setText("🔄 同步账号 (配置检查失败)")
             logging.error(f"检查青龙配置失败: {str(e)}")
 
     def show_settings(self):
@@ -949,6 +989,12 @@ class AccountListWindow(QMainWindow):
         time_item = QTableWidgetItem(add_time)
         self.table_widget.setItem(row, 2, time_item)
 
+        # 添加状态列
+        status_item = QTableWidgetItem("")
+        status_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        status_item.setFlags(status_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        self.table_widget.setItem(row, 3, status_item)
+
         # 存储完整数据
         name_item.setData(Qt.ItemDataRole.UserRole, account_data)
 
@@ -962,6 +1008,12 @@ class AccountListWindow(QMainWindow):
         # 更新时间
         time_item = QTableWidgetItem(add_time)
         self.table_widget.setItem(row, 2, time_item)
+
+        # 更新状态列（清空旧状态）
+        status_item = QTableWidgetItem("")
+        status_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        status_item.setFlags(status_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        self.table_widget.setItem(row, 3, status_item)
 
         # 更新存储的数据
         name_item.setData(Qt.ItemDataRole.UserRole, account_data)
@@ -1063,12 +1115,13 @@ class AccountListWindow(QMainWindow):
         except Exception as e:
             QMessageBox.warning(self, "错误", f"读取配置失败：{str(e)}")
 
-    def process_imported_envs(self, envs):
+    def process_imported_envs(self, envs, after_sync_check=False):
         # 过滤出JD_COOKIE
         jd_cookies = [env for env in envs if env.get("name") == "JD_COOKIE"]
 
         if not jd_cookies:
             self.statusBar.showMessage("青龙面板中未找到JD_COOKIE", 3000)
+            self.sync_btn.setEnabled(True)
             return
 
         success_count = 0
@@ -1076,7 +1129,6 @@ class AccountListWindow(QMainWindow):
         failed_count = 0
 
         for env in jd_cookies:
-            print(f"env == {env}")
             try:
                 cookie = env["value"]
                 remarks = env.get("remarks", "")
@@ -1117,7 +1169,6 @@ class AccountListWindow(QMainWindow):
                         dt = dt.replace(tzinfo=timezone.utc)  # 明确为UTC时间
                         add_time = dt.astimezone(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S")
                     except Exception as e:
-                        print(e)
                         add_time = ""
 
                 if existing_row >= 0:
@@ -1131,10 +1182,14 @@ class AccountListWindow(QMainWindow):
 
             except Exception as e:
                 failed_count += 1
-                print(f"导入账户失败: {str(e)}")
 
         # 显示导入结果
         self.show_import_results(success_count, update_count, failed_count)
+        self.loading_label.clear()
+        if after_sync_check:
+            QTimer.singleShot(100, self.batch_check_cookies_status)
+        else:
+            self.sync_btn.setEnabled(True)
 
     def on_import_error(self, error):
         QMessageBox.warning(self, "错误", f"从青龙导入失败：{error}")
@@ -1158,38 +1213,39 @@ class AccountListWindow(QMainWindow):
 
         self.statusBar.showMessage(final_message, 3000)
 
-    def sync_from_qinglong(self, is_auto=True):
+    def sync_and_check(self):
+        """同步账号并批量异步检测cookie状态"""
+        self.sync_btn.setEnabled(False)
+        self.statusBar.showMessage("正在同步账号...", 0)
+        self.loading_label.setText("🔄 正在同步青龙面板数据...")
+        self.sync_from_qinglong(is_auto=False, after_sync_check=True)
+
+    def sync_from_qinglong(self, is_auto=True, after_sync_check=False):
         """从青龙同步数据
         Args:
             is_auto (bool): 是否为自动同步
+            after_sync_check (bool): 同步后是否批量检测cookie状态
         """
         try:
-            # 检查配置文件是否存在
             config_path = get_config_path()
             if not os.path.exists(config_path):
                 self.statusBar.showMessage("未检测到青龙配置，请先完成青龙设置", 5000)
+                self.sync_btn.setEnabled(True)
                 return
-
             with open(config_path, "r") as f:
                 config = json.load(f)
-
-            # 显示同步开始状态
             self.loading_label.setText("🔄 正在同步青龙面板数据...")
             self.statusBar.showMessage("正在连接青龙面板...", 0)
-
-            # 创建并启动导入线程
             self.import_thread = QinglongOperationThread("import", config)
-            self.import_thread.env_result.connect(self.process_imported_envs)
-            self.import_thread.error.connect(
-                lambda error: self.on_sync_error(error, is_auto)
-            )
+            self.import_thread.env_result.connect(lambda envs: self.process_imported_envs(envs, after_sync_check))
+            self.import_thread.error.connect(lambda error: self.on_sync_error(error, is_auto))
             self.import_thread.finished.connect(self.on_sync_finished)
             self.import_thread.start()
-
         except Exception as e:
             error_prefix = "自动同步" if is_auto else "同步"
             self.statusBar.showMessage(f"{error_prefix}失败：{str(e)}", 5000)
             self.loading_label.clear()
+            self.sync_btn.setEnabled(True)
 
     def on_sync_error(self, error, is_auto=True):
         """同步错误处理"""
@@ -1200,6 +1256,77 @@ class AccountListWindow(QMainWindow):
     def on_sync_finished(self):
         """同步完成处理"""
         self.loading_label.clear()
+
+    def check_cookie_status(self, item):
+        """检查单个cookie的状态"""
+        row = item.row()
+        account_data = self.table_widget.item(row, 1).data(Qt.ItemDataRole.UserRole)
+        if not account_data:
+            return
+
+        status_item = QTableWidgetItem("检查中...")
+        status_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.table_widget.setItem(row, 3, status_item)
+
+        thread = CheckCookieThread(row, account_data, self)
+        thread.result.connect(self.update_cookie_status)
+        # 线程结束后自动从列表中移除，防止内存泄漏
+        thread.finished.connect(lambda: self.check_threads.remove(thread))
+        self.check_threads.append(thread)
+        thread.start()
+
+    def update_cookie_status(self, row, status):
+        """更新表格中的cookie状态"""
+        status_item = QTableWidgetItem(status)
+        status_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.table_widget.setItem(row, 3, status_item)
+
+    def batch_check_cookies_status(self):
+        """批量异步检测所有cookie状态，检测完自动复制失效账号名"""
+        self.statusBar.showMessage("正在批量检测cookie状态...", 0)
+        self.loading_label.setText("🍪 正在检测cookie状态...")
+        row_count = self.table_widget.rowCount()
+        cookies_list = []
+        for row in range(row_count):
+            item = self.table_widget.item(row, 1)
+            if item:
+                data = item.data(Qt.ItemDataRole.UserRole)
+                cookies_list.append((row, data))
+        results = [None] * row_count
+        def check_one(row, data):
+            try:
+                cookie_str = f"pt_key={data['pt_key']};pt_pin={data['pt_pin']};"
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                result = loop.run_until_complete(need_login(cookie_str))
+                loop.close()
+                return (row, "❌ 失效" if result else "✅ 有效")
+            except Exception as e:
+                return (row, "⚠️ 错误")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+            future_to_row = {executor.submit(check_one, row, data): row for row, data in cookies_list}
+            for future in concurrent.futures.as_completed(future_to_row):
+                row, status = future.result()
+                status_item = QTableWidgetItem(status)
+                status_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                status_item.setFlags(status_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                self.table_widget.setItem(row, 3, status_item)
+                results[row] = status
+        # 检测完自动复制失效账号名
+        invalid_names = []
+        for row in range(row_count):
+            if results[row] == "❌ 失效":
+                name_item = self.table_widget.item(row, 1)
+                if name_item:
+                    invalid_names.append(name_item.text())
+        if invalid_names:
+            names_str = ",".join(invalid_names)
+            QApplication.clipboard().setText(names_str)
+            self.statusBar.showMessage(f"失效账户已复制到剪贴板: {names_str}", 5000)
+        else:
+            self.statusBar.showMessage("所有账户均有效", 3000)
+        self.loading_label.clear()
+        self.sync_btn.setEnabled(True)
 
 
 # 添加新的线程类用于保存设置和导入cookie
