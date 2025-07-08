@@ -4,6 +4,7 @@ import random
 import re
 import time
 from io import BytesIO
+from datetime import datetime
 
 import fire
 import pyautogui
@@ -291,7 +292,7 @@ def get_ck(jd_username, jd_passwd):
         # browser.maximize_window()
         wait = WebDriverWait(browser, timeout=20)
 
-        pt_key, pt_pin, cookie = "", "", ""
+        pt_key, pt_pin, pt_st = "", "", ""
         for n in range(8):
             browser.get("https://plogin.m.jd.com/login/login")
             logger.info("请在网页端通过手机号码登录")
@@ -345,6 +346,8 @@ def get_ck(jd_username, jd_passwd):
                     pt_key = _["value"]
                 elif _["name"] == "pt_pin":
                     pt_pin = _["value"]
+                elif _["name"] == "pt_st":
+                    pt_st = _["value"]
 
                 if pt_key and pt_pin:
                     break
@@ -358,6 +361,7 @@ def get_ck(jd_username, jd_passwd):
         cookie = {
             "pt_key": pt_key,
             "pt_pin": pt_pin,
+            "pt_st": pt_st,
         }
         logger.info(f"获取到cookie是：{cookie}")
         return cookie
@@ -379,7 +383,7 @@ def set_qinglong_ck(qinglong, envlist, cookie, username):
         return None
 
     ck = (
-        f"pt_key={cookie['pt_key']};pt_pin={cookie['pt_pin']};"
+        f"pt_key={cookie['pt_key']};pt_pin={cookie['pt_pin']};pt_st={cookie['pt_st']};"
     )
 
     ck_env_dict = serch_ck(cookie["pt_pin"], envlist)
@@ -425,7 +429,7 @@ async def main(update_type='培林'):
 
         bit_users = list(map(lambda x: x['remarks'].split('@')[0], disable_cookies))
     else:
-        bit_users = [update_type] if isinstance(update_type, str) else update_type
+        bit_users = update_type
 
 
     if not bit_users:
