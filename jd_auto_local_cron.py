@@ -14,6 +14,7 @@ from qinglong import Qinglong
 
 from asyncer import asyncify
 from croniter import croniter
+from qinglong import init_ql
 
 logger = logging.getLogger(__name__)
 
@@ -23,21 +24,6 @@ except:
     send = lambda *args: ...
 
 keep_keys = ('id', 'labels', 'name', 'command')
-
-
-def init_ql():
-    host = "http://127.0.0.1:5700"
-    client_id = os.environ.get("local_client_id")
-    client_secret = os.environ.get("local_client_secret")
-
-    if not (host and client_id and client_secret):
-        logger.error("请设置青龙环境环境变量 host、client_id、client_secret!")
-        sys.exit(0)
-
-    json_config = {"host": host, "client_id": client_id, "client_secret": client_secret}
-
-    qinglong = Qinglong(json_config)
-    return qinglong
 
 async def main():
     qinglong = init_ql()
