@@ -54,23 +54,22 @@ async def main():
     ql = init_ql()
     cookies = await get_cookies(ql)
 
-    disable_cookies_ids = []
+    disable_cookies_ids = {}
 
     for cookie in cookies:
         if await need_login(cookie['value']):
-            disable_cookies_ids.append(cookie['id'])
+            disable_cookies_ids[cookie['id']] = cookie
 
-    ql.disable_env(disable_cookies_ids)
+    ql.disable_env(list(disable_cookies_ids.keys()))
 
 
     msg = "\n".join(
         [
             f"{cookie['remarks'].split('@')[0]} cookie 作废成功"
-            for cookie in disable_cookies_ids
+            for cookie in disable_cookies_ids.values()
         ]
     )
     send("京东cookie强制失效", msg)
-
 
 
 if __name__ == "__main__":
