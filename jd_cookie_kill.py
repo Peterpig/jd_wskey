@@ -1,6 +1,6 @@
 """
 new Env('京东cookie强制作废');
-cron:20/* * * * * jd_cookie_kill.py
+cron:*/20 * * * * jd_cookie_kill.py
 """
 import random
 import requests
