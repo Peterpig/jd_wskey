@@ -9,9 +9,8 @@ from datetime import datetime,timezone,timedelta
 import asyncio
 import concurrent.futures
 
-from PySide6.QtCore import Qt, QThread, QTimer, QUrl, Signal, QByteArray
+from PySide6.QtCore import Qt, QThread, QTimer, Signal
 from PySide6.QtGui import QIcon
-from PySide6.QtNetwork import QNetworkCookie
 from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile, QWebEngineSettings
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import (
@@ -33,6 +32,14 @@ from PySide6.QtWidgets import (
 
 from qinglong import Qinglong
 from jd_cookie_kill import need_login
+
+# 导入Playwright模块
+try:
+    from playwright_jd_cookie import JDPlaywrightLogin
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    PLAYWRIGHT_AVAILABLE = False
+    print("警告: Playwright模块未安装，将使用WebView方案")
 
 
 def setup_logging():
@@ -82,52 +89,6 @@ def setup_logging():
     except Exception as e:
         print(f"设置日志失败: {str(e)}")
         return None
-
-
-def create_jd_cookie(name, value, domain=".jd.com", path="/"):
-    """
-    创建京东网站通用的cookie
-
-    Args:
-        name (str): cookie名称
-        value (str): cookie值
-        domain (str, optional): cookie域名. 默认为 ".jd.com"
-        path (str, optional): cookie路径. 默认为 "/"
-
-    Returns:
-        QNetworkCookie: 创建的cookie对象
-
-    Raises:
-        Exception: cookie创建失败时抛出异常
-    """
-    try:
-        cookie = QNetworkCookie(name.encode(), value.encode())
-        cookie.setDomain(domain)
-        cookie.setPath(path)
-        return cookie
-    except Exception as e:
-        logging.error(f"创建Cookie失败: {str(e)}")
-        logging.error(traceback.format_exc())
-        raise
-
-
-def set_cookies_and_load(web_view, url, cookies, domain, delay_ms=400):
-    """
-    先注入所有cookie，延迟一段时间后再加载页面（兼容PySide6）。
-    """
-    cookie_store = web_view.page().profile().cookieStore()
-    # 遍历所有cookie
-    for k, v in cookies.items():
-        cookie = QNetworkCookie()
-        cookie.setName(QByteArray(k.encode()))
-        cookie.setValue(QByteArray(v.encode()))
-        cookie.setDomain(domain)
-        cookie.setPath("/")
-        cookie.setSecure(True)
-        cookie.setHttpOnly(False)
-        cookie_store.setCookie(cookie, QUrl(url))
-    # 延迟加载页面
-    QTimer.singleShot(delay_ms, lambda: web_view.setUrl(QUrl(url)))
 
 
 class OrderWindow(QMainWindow):
@@ -191,7 +152,11 @@ class OrderWindow(QMainWindow):
             # 设置cookies（参照 test.py 方式）
             order_url = "https://trade.m.jd.com/order/orderlist_jdm.shtml?sceneval=2&jxsid=17389784862254908880&appCode=ms0ca95114&orderType=all&ptag=7155.1.11&source=m_inner_myJd.orderFloor_orderlist"
             domain = ".jd.com"
-            set_cookies_and_load(self.web_view, order_url, cookies, domain)
+            cookie_str = '; '.join([f"{name}={value}" for name, value in cookies.items()])
+            self.webpage.loadFinished.connect(lambda: self.webpage.runJavaScript(f"""
+                document.cookie = '{cookie_str}';
+                window.location.href = '{order_url}';
+            """))
 
             # 设置窗口标志
             self.setWindowFlags(
@@ -492,7 +457,7 @@ class CheckCookieThread(QThread):
 
     def run(self):
         try:
-            cookie_str = f"pt_key={self.cookie_data['pt_key']};pt_pin={self.cookie_data['pt_pin']};"
+            cookie_str = f"pt_key={self.cookie_data['pt_key']};pt_pin={self.cookie_data['pt_pin']};pt_st={self.cookie_data['pt_st']};"
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             result = loop.run_until_complete(need_login(cookie_str))
@@ -506,11 +471,95 @@ class CheckCookieThread(QThread):
             self.result.emit(self.row, "⚠️ 错误")
 
 
+class BatchCheckThread(QThread):
+    progress = Signal(int, str)  # row, status
+    finished_signal = Signal(list)  # invalid_names
+
+    def __init__(self, table_widget, parent=None):
+        super().__init__(parent)
+        self.table_widget = table_widget
+
+    def run(self):
+        try:
+            row_count = self.table_widget.rowCount()
+            cookies_list = []
+
+            # 收集所有需要检测的cookie
+            for row in range(row_count):
+                item = self.table_widget.item(row, 1)
+                if item:
+                    data = item.data(Qt.ItemDataRole.UserRole)
+                    if data:
+                        cookies_list.append((row, data))
+
+            invalid_names = []
+
+            # 使用线程池进行并发检测
+            with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+                future_to_row = {}
+
+                # 提交所有检测任务
+                for row, data in cookies_list:
+                    future = executor.submit(self.check_one_cookie, row, data)
+                    future_to_row[future] = row
+
+                # 处理结果
+                for future in concurrent.futures.as_completed(future_to_row):
+                    try:
+                        row, status = future.result()
+                        self.progress.emit(row, status)
+
+                        # 收集失效的账号名
+                        if status == "❌ 失效":
+                            name_item = self.table_widget.item(row, 1)
+                            if name_item:
+                                invalid_names.append(name_item.text())
+                    except Exception as e:
+                        logging.error(f"批量检测失败: {str(e)}")
+
+            # 发送完成信号
+            self.finished_signal.emit(invalid_names)
+
+        except Exception as e:
+            logging.error(f"批量检测线程失败: {str(e)}")
+            self.finished_signal.emit([])
+
+    def check_one_cookie(self, row, data):
+        """检测单个cookie"""
+        try:
+            cookie_str = f"pt_key={data['pt_key']};pt_pin={data['pt_pin']};pt_st={data['pt_st']};"
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            result = loop.run_until_complete(need_login(cookie_str))
+            loop.close()
+            return (row, "❌ 失效" if result else "✅ 有效")
+        except Exception as e:
+            return (row, "⚠️ 错误")
+
+
 class AccountListWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("JD账户管理器")
         self.setGeometry(100, 100, 600, 600)
+
+        # 设置窗口图标
+        icon_paths = [
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils", "jd_new_logo.png"),
+            os.path.join(os.getcwd(), "utils", "jd_new_logo.png"),
+            "utils/jd_new_logo.png",
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils", "jd.png"),
+            os.path.join(os.getcwd(), "utils", "jd.png"),
+            "utils/jd.png"
+        ]
+
+        for icon_path in icon_paths:
+            if os.path.exists(icon_path):
+                try:
+                    self.setWindowIcon(QIcon(icon_path))
+                    break
+                except Exception:
+                    continue
 
         # 创建主窗口部件和布局
         central_widget = QWidget()
@@ -746,7 +795,7 @@ class AccountListWindow(QMainWindow):
 
         for line in lines:
             # 定义需要匹配的字段
-            fields = {"pt_key": None, "pt_pin": None, "__time": None, "username": None}
+            fields = {"pt_key": None, "pt_st": None, "pt_pin": None, "__time": None, "username": None}
 
             # 使用正则表达式匹配每个字段
             for key in fields.keys():
@@ -757,6 +806,9 @@ class AccountListWindow(QMainWindow):
 
             # 如果必要字段存在，添加到账户列表
             if fields["pt_key"] and fields["pt_pin"]:
+                # pt_st 兼容老数据，如果没有则用 pt_key 值
+                if not fields["pt_st"]:
+                    fields["pt_st"] = fields["pt_key"]
                 # 保存原始时间戳，不进行格式化
                 if fields["__time"]:
                     try:
@@ -820,6 +872,7 @@ class AccountListWindow(QMainWindow):
         orders_action = context_menu.addAction("🛒 查看订单")
         asset_action = context_menu.addAction("💰 账户资产")
         service_action = context_menu.addAction("🎯 京东客服")  # 新增客服选项
+        auto_login_action = context_menu.addAction("🔐 自动登录")  # 新增自动登录选项
 
         context_menu.addSeparator()
 
@@ -841,6 +894,8 @@ class AccountListWindow(QMainWindow):
             self.show_assets(account_item)
         elif action == service_action:
             self.show_service(account_item)  # 新增客服处理
+        elif action == auto_login_action:
+            self.auto_login_account(account_item)  # 新增自动登录处理
         elif action == export_action:
             self.export_data(account_item)
         elif action == backup_action:
@@ -943,7 +998,7 @@ class AccountListWindow(QMainWindow):
                     try:
                         env_data = {
                             "name": "JD_COOKIE",
-                            "value": f"pt_key={account_data['pt_key']};pt_pin={account_data['pt_pin']};",
+                            "value": f"pt_key={account_data['pt_key']};pt_pin={account_data['pt_pin']};pt_st={account_data['pt_st']};",
                             "remarks": account_data.get("username", ""),
                         }
                         self.sync_thread = QinglongOperationThread(
@@ -1055,6 +1110,7 @@ class AccountListWindow(QMainWindow):
             details += f"用户名: {data['username'] or '未设置'}\n"
             details += f"PT_PIN: {data['pt_pin']}\n"
             details += f"PT_KEY: {data['pt_key']}\n"
+            details += f"PT_ST: {data['pt_st']}\n"
             if data["__time"]:
                 details += f"到期时间: {data['__time']}"
 
@@ -1063,7 +1119,7 @@ class AccountListWindow(QMainWindow):
     def show_orders(self, item):
         data = item.data(Qt.ItemDataRole.UserRole)
         if data:
-            cookies = {"pt_key": data["pt_key"], "pt_pin": data["pt_pin"]}
+            cookies = {"pt_key": data["pt_key"], "pt_st": data["pt_st"], "pt_pin": data["pt_pin"]}
             account_name = data["username"] or data["pt_pin"]
             self.order_window = OrderWindow(cookies, account_name)
             self.order_window.show()
@@ -1071,7 +1127,7 @@ class AccountListWindow(QMainWindow):
     def show_assets(self, item):
         data = item.data(Qt.ItemDataRole.UserRole)
         if data:
-            cookies = {"pt_key": data["pt_key"], "pt_pin": data["pt_pin"]}
+            cookies = {"pt_key": data["pt_key"], "pt_st": data["pt_st"], "pt_pin": data["pt_pin"]}
             account_name = data["username"] or data["pt_pin"]
             self.asset_window = AssetWindow(cookies, account_name)
             self.asset_window.show()
@@ -1091,6 +1147,7 @@ class AccountListWindow(QMainWindow):
 
             cookies = {
                 "pt_key": account_data["pt_key"],
+                "pt_st": account_data["pt_st"],
                 "pt_pin": account_data["pt_pin"],
             }
 
@@ -1099,6 +1156,81 @@ class AccountListWindow(QMainWindow):
 
         except Exception as e:
             QMessageBox.warning(self, "错误", f"打开客服失败：{str(e)}")
+
+    def auto_login_account(self, account_item):
+        """自动登录功能 - 打开登录页面让用户手动登录"""
+        try:
+            account_data = account_item.data(Qt.ItemDataRole.UserRole)
+            if not account_data:
+                QMessageBox.warning(self, "错误", "无法获取账户信息")
+                return
+
+            account_name = account_item.text()
+
+            # 创建登录窗口
+            self.login_window = JDLoginWindow(account_name, self)
+            self.login_window.cookie_updated.connect(self.on_cookie_updated)
+            self.login_window.show()
+
+        except Exception as e:
+            QMessageBox.warning(self, "错误", f"打开登录页面失败：{str(e)}")
+
+    def on_cookie_updated(self, account_name, new_cookie):
+        """处理cookie更新"""
+        try:
+            # 更新本地表格数据
+            for row in range(self.table_widget.rowCount()):
+                item = self.table_widget.item(row, 1)
+                if item and item.text() == account_name:
+                    # 更新存储的数据
+                    item.setData(Qt.ItemDataRole.UserRole, new_cookie)
+
+                    # 更新状态
+                    status_item = QTableWidgetItem("✅ 已更新")
+                    status_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                    self.table_widget.setItem(row, 3, status_item)
+
+                    # 更新青龙面板
+                    self.update_qinglong_cookie(account_name, new_cookie)
+                    break
+
+            QMessageBox.information(self, "成功", f"账户 {account_name} 的cookie已更新")
+
+        except Exception as e:
+            QMessageBox.warning(self, "错误", f"更新cookie失败：{str(e)}")
+
+    def update_qinglong_cookie(self, account_name, cookie_data):
+        """更新青龙面板的cookie"""
+        try:
+            config_path = get_config_path()
+            if not os.path.exists(config_path):
+                QMessageBox.warning(self, "错误", "未找到青龙面板配置")
+                return
+
+            with open(config_path, "r") as f:
+                config = json.load(f)
+
+            # 构造cookie字符串
+            cookie_str = f"pt_key={cookie_data['pt_key']};pt_pin={cookie_data['pt_pin']};pt_st={cookie_data['pt_st']};"
+
+            # 准备环境变量数据
+            env_data = {
+                "name": "JD_COOKIE",
+                "value": cookie_str,
+                "remarks": account_name,
+            }
+
+            # 创建更新线程
+            self.update_thread = QinglongOperationThread("add_cookie", config, env_data)
+            self.update_thread.error.connect(self.on_update_error)
+            self.update_thread.start()
+
+        except Exception as e:
+            QMessageBox.warning(self, "错误", f"更新青龙面板失败：{str(e)}")
+
+    def on_update_error(self, error):
+        """处理更新错误"""
+        QMessageBox.warning(self, "错误", f"更新青龙面板失败：{error}")
 
     def import_from_qinglong(self):
         try:
@@ -1285,54 +1417,33 @@ class AccountListWindow(QMainWindow):
         """批量异步检测所有cookie状态，检测完自动复制失效账号名"""
         self.statusBar.showMessage("正在批量检测cookie状态...", 0)
         self.loading_label.setText("🍪 正在检测cookie状态...")
-        row_count = self.table_widget.rowCount()
-        cookies_list = []
-        for row in range(row_count):
-            item = self.table_widget.item(row, 1)
-            if item:
-                data = item.data(Qt.ItemDataRole.UserRole)
-                cookies_list.append((row, data))
-        results = [None] * row_count
-        def check_one(row, data):
-            try:
-                cookie_str = f"pt_key={data['pt_key']};pt_pin={data['pt_pin']};"
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                result = loop.run_until_complete(need_login(cookie_str))
-                loop.close()
-                return (row, "❌ 失效" if result else "✅ 有效")
-            except Exception as e:
-                return (row, "⚠️ 错误")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-            future_to_row = {executor.submit(check_one, row, data): row for row, data in cookies_list}
-            for future in concurrent.futures.as_completed(future_to_row):
-                row, status = future.result()
-                status_item = QTableWidgetItem(status)
-                status_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                status_item.setFlags(status_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                self.table_widget.setItem(row, 3, status_item)
-                results[row] = status
-        # 检测完自动复制失效账号名
-        invalid_names = []
-        for row in range(row_count):
-            if results[row] == "❌ 失效":
-                name_item = self.table_widget.item(row, 1)
-                if name_item:
-                    invalid_names.append(name_item.text())
-        if invalid_names:
-            names_str = ",".join(invalid_names)
-            QApplication.clipboard().setText(names_str)
-            self.statusBar.showMessage(f"失效账户已复制到剪贴板: {names_str}", 5000)
-        else:
-            self.statusBar.showMessage("所有账户均有效", 3000)
+
+        # 禁用同步按钮，防止重复操作
+        self.sync_btn.setEnabled(False)
+
+        # 创建批量检测线程
+        self.batch_check_thread = BatchCheckThread(self.table_widget, self)
+        self.batch_check_thread.progress.connect(self.update_cookie_status)
+        self.batch_check_thread.finished_signal.connect(self.on_batch_check_finished)
+        self.batch_check_thread.start()
+
+    def on_batch_check_finished(self, invalid_names):
+        """批量检测完成处理"""
         self.loading_label.clear()
         self.sync_btn.setEnabled(True)
+
+        if invalid_names:
+            # 将失效账号以逗号分隔复制到剪贴板
+            QApplication.clipboard().setText(",".join(invalid_names))
+            self.statusBar.showMessage(f"失效账号已复制到剪贴板 ({len(invalid_names)}个)", 3000)
+        else:
+            self.statusBar.showMessage("所有账号有效", 3000)
 
 
 # 添加新的线程类用于保存设置和导入cookie
 class QinglongOperationThread(QThread):
     success = Signal(str)  # 成功信号，携带成功消息
-    error = Signal(str)  # 错误信号，携带错误消息
+    error = Signal(str)   # 错误信号，携带错误消息
     import_result = Signal(list)  # 导入结果信号，携带账户数据列表
     env_result = Signal(list)  # 环境变量结果信号
 
@@ -1397,8 +1508,11 @@ class AssetWindow(QMainWindow):
         """
         )
 
-        # 创建自定义profile以管理cookie
-        self.profile = QWebEngineProfile("jd_asset_profile", self.web_view)
+        # 创建自定义profile以管理cookie（改为使用defaultProfile，并设置User-Agent）
+        import os
+        os.environ["QTWEBENGINE_DISABLE_SANDBOX"] = "1"
+        self.profile = QWebEngineProfile.defaultProfile()
+        self.profile.setHttpUserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
         self.webpage = QWebEnginePage(self.profile, self.web_view)
         self.web_view.setPage(self.webpage)
 
@@ -1433,7 +1547,11 @@ class AssetWindow(QMainWindow):
         # 设置cookies并加载页面
         asset_url = "https://my.m.jd.com/asset/index.html?sceneval=2&jxsid=17389784862254908880&appCode=ms0ca95114&ptag=7155.1.58"
         domain = ".jd.com"
-        set_cookies_and_load(self.web_view, asset_url, cookies, domain)
+        cookie_str = '; '.join([f"{name}={value}" for name, value in cookies.items()])
+        self.webpage.loadFinished.connect(lambda: self.webpage.runJavaScript(f"""
+            document.cookie = '{cookie_str}';
+            window.location.href = '{asset_url}';
+        """))
 
         # 添加页面加载完成的处理
         self.webpage.loadFinished.connect(self.handle_load_finished) # 连接加载完成信号
@@ -1498,7 +1616,11 @@ class ServiceWindow(QMainWindow):
         # 设置cookies并加载页面
         service_url = "https://jdcs.m.jd.com/after/index.action?categoryId=600&v=6&entry=m_self_jd&sid="
         domain = ".jd.com"
-        set_cookies_and_load(self.web_view, service_url, cookies, domain)
+        cookie_str = '; '.join([f"{name}={value}" for name, value in cookies.items()])
+        self.webpage.loadFinished.connect(lambda: self.webpage.runJavaScript(f"""
+            document.cookie = '{cookie_str}';
+            window.location.href = '{service_url}';
+        """))
 
         # 添加页面加载完成的处理
         self.webpage.loadFinished.connect(self.handle_load_finished) # 连接加载完成信号
@@ -1511,6 +1633,184 @@ class ServiceWindow(QMainWindow):
             logging.info("客服页面加载成功")
         else:
             logging.error("客服页面加载失败")
+
+
+class PlaywrightLoginThread(QThread):
+    """Playwright登录线程"""
+    cookie_obtained = Signal(dict)  # cookie获取成功信号
+    login_failed = Signal(str)  # 登录失败信号
+    status_updated = Signal(str)  # 状态更新信号
+
+    def __init__(self, account_name, parent=None, qinglong_config=None):
+        super().__init__(parent)
+        self.account_name = account_name
+        self.qinglong_config = qinglong_config
+        self.playwright_login = JDPlaywrightLogin()
+
+    def run(self):
+        try:
+            # 创建新的事件循环
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+            # 运行异步函数
+            result = loop.run_until_complete(self.playwright_login.get_jd_cookies(
+                self.account_name,
+                self.qinglong_config
+            ))
+            loop.close()
+
+            if result:
+                self.cookie_obtained.emit(result)
+            else:
+                self.login_failed.emit("获取cookie失败")
+
+        except Exception as e:
+            self.login_failed.emit(f"Playwright登录失败: {str(e)}")
+
+
+class JDLoginWindow(QMainWindow):
+    """京东登录窗口"""
+
+    cookie_updated = Signal(str, dict)  # account_name, cookie_data
+
+    def __init__(self, account_name, parent=None):
+        super().__init__(parent)
+        self.account_name = account_name
+        self.parent = parent
+        self.setWindowTitle(f"京东登录 - {account_name}")
+
+        # 调整窗口大小和位置
+        screen = QApplication.primaryScreen().geometry()
+        self.setGeometry(
+            screen.width() // 4,
+            screen.height() // 4,
+            600,  # 减小宽度
+            400,  # 减小高度
+        )
+
+        # 创建主窗口部件
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        layout = QVBoxLayout(central_widget)
+        layout.setContentsMargins(20, 20, 20, 20)
+
+        # 设置窗口样式
+        self.setStyleSheet(
+            """
+            QMainWindow {
+                background-color: #f5f5f5;
+            }
+            QLabel {
+                font-size: 14px;
+                color: #333;
+            }
+            QPushButton {
+                padding: 12px 24px;
+                font-size: 14px;
+                border-radius: 6px;
+                border: none;
+                background-color: #1890ff;
+                color: white;
+                min-height: 40px;
+            }
+            QPushButton:hover {
+                background-color: #40a9ff;
+            }
+            QPushButton:disabled {
+                background-color: #d9d9d9;
+                color: #999;
+            }
+            """
+        )
+
+        # 添加说明标签
+        info_label = QLabel("🚀 Playwright 自动登录")
+        info_label.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 10px;")
+        layout.addWidget(info_label)
+
+        desc_label = QLabel("点击下方按钮启动浏览器，扫码登录京东账号后自动获取cookie")
+        desc_label.setStyleSheet("color: #666; margin-bottom: 20px;")
+        desc_label.setWordWrap(True)
+        layout.addWidget(desc_label)
+
+        # 添加Playwright登录按钮
+        self.playwright_btn = QPushButton("🚀 启动浏览器登录")
+        self.playwright_btn.clicked.connect(self.get_cookies_with_playwright)
+        layout.addWidget(self.playwright_btn)
+
+        # 添加状态标签
+        self.status_label = QLabel("准备就绪，点击按钮开始登录")
+        self.status_label.setStyleSheet("color: #666; font-size: 12px; margin-top: 10px;")
+        layout.addWidget(self.status_label)
+
+        # 设置窗口标志
+        self.setWindowFlags(Qt.WindowType.Window)
+
+        # 初始化Playwright线程
+        self.playwright_thread = None
+
+    def get_cookies_with_playwright(self):
+        """使用Playwright获取cookie"""
+        if not PLAYWRIGHT_AVAILABLE:
+            QMessageBox.warning(self, "错误", "Playwright模块未安装，请先安装playwright")
+            return
+
+        logging.info("开始使用Playwright获取cookie...")
+        self.status_label.setText("正在启动浏览器...")
+        self.playwright_btn.setEnabled(False)
+
+        # 获取青龙配置
+        qinglong_config = None
+        try:
+            config_path = get_config_path()
+            if os.path.exists(config_path):
+                with open(config_path, "r") as f:
+                    qinglong_config = json.load(f)
+                    logging.info("已加载青龙面板配置")
+            else:
+                logging.warning("未找到青龙面板配置，将只获取cookie不保存")
+        except Exception as e:
+            logging.error(f"读取青龙配置失败: {str(e)}")
+
+        # 创建并启动Playwright线程
+        self.playwright_thread = PlaywrightLoginThread(
+            self.account_name,
+            self,
+            qinglong_config
+        )
+        self.playwright_thread.cookie_obtained.connect(self.on_playwright_cookie_obtained)
+        self.playwright_thread.login_failed.connect(self.on_playwright_login_failed)
+        self.playwright_thread.status_updated.connect(self.status_label.setText)
+        self.playwright_thread.start()
+
+    def on_playwright_cookie_obtained(self, cookie_data):
+        """Playwright获取到cookie的处理"""
+        try:
+            logging.info(f"Playwright获取到cookie: {cookie_data}")
+
+            # 发送cookie更新信号
+            # self.cookie_updated.emit(self.account_name, cookie_data)
+
+            # 显示成功消息
+            QMessageBox.information(self, "登录成功", f"账户 {self.account_name} 登录成功，cookie已更新")
+
+            # 关闭窗口
+            self.close()
+
+        except Exception as e:
+            logging.error(f"处理Playwright cookie失败: {str(e)}")
+            QMessageBox.warning(self, "错误", f"处理cookie失败: {str(e)}")
+        finally:
+            # 恢复按钮状态
+            self.playwright_btn.setEnabled(True)
+
+    def on_playwright_login_failed(self, error_msg):
+        """Playwright登录失败的处理"""
+        logging.error(f"Playwright登录失败: {error_msg}")
+        QMessageBox.warning(self, "登录失败", f"Playwright登录失败: {error_msg}")
+        self.status_label.setText("登录失败，请重试")
+        self.playwright_btn.setEnabled(True)
 
 
 def get_config_path():
@@ -1527,9 +1827,16 @@ def get_config_path():
 
 def main():
     try:
-        # 设置环境变量以减少Qt WebEngine的日志输出
-        os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--disable-logging"
-        os.environ["QT_LOGGING_RULES"] = "qt.webenginecontext.debug=false"
+        # 启动优化：设置环境变量以减少Qt WebEngine的日志输出和启动时间
+        os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--disable-logging --disable-gpu-sandbox --disable-dev-shm-usage --no-sandbox --disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows --disable-ipc-flooding-protection"
+        os.environ["QT_LOGGING_RULES"] = "qt.webenginecontext.debug=false;qt.webengine.*=false"
+        os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+        os.environ["QT_SCALE_FACTOR"] = "1"
+        os.environ["QT_WEBENGINE_DISABLE_SANDBOX"] = "1"
+
+        # 禁用不必要的Qt功能以加快启动
+        os.environ["QT_DISABLE_GLIB"] = "1"
+        os.environ["QT_DISABLE_ACCESSIBILITY"] = "1"
 
         # 设置日志
         log_file = setup_logging()
@@ -1543,13 +1850,29 @@ def main():
         app = QApplication(sys.argv)
         app.setApplicationName("JD Account Manager")
 
-        # 设置应用图标
-        icon_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "utils", "jd.png"
-        )
-        if os.path.exists(icon_path):
-            app.setWindowIcon(QIcon(icon_path))
-            logger.info(f"已设置应用图标: {icon_path}")
+        # 设置应用图标 - 尝试多个可能的路径
+        icon_paths = [
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils", "jd_new_logo.png"),
+            os.path.join(os.getcwd(), "utils", "jd_new_logo.png"),
+            "utils/jd_new_logo.png",
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils", "jd.png"),
+            os.path.join(os.getcwd(), "utils", "jd.png"),
+            "utils/jd.png"
+        ]
+
+        icon_set = False
+        for icon_path in icon_paths:
+            if os.path.exists(icon_path):
+                try:
+                    app.setWindowIcon(QIcon(icon_path))
+                    logger.info(f"已设置应用图标: {icon_path}")
+                    icon_set = True
+                    break
+                except Exception as e:
+                    logger.warning(f"设置图标失败 {icon_path}: {str(e)}")
+
+        if not icon_set:
+            logger.warning("未找到应用图标文件")
 
         # 捕获未处理的异常
         sys.excepthook = handle_exception
